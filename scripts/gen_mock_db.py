@@ -8,9 +8,8 @@ Usage:
 import os
 import random
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
-JST = timezone(timedelta(hours=9))
 DAYS = 60
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "mock", "keystroke.db")
 
@@ -45,7 +44,7 @@ def main() -> None:
         """
     )
 
-    today = datetime.now(JST).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
     start_date = today - timedelta(days=DAYS - 1)
 
     all_records: list[tuple[str, int]] = []

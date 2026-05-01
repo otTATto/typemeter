@@ -99,7 +99,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
-            let db_path = if let Ok(path) = std::env::var("TYPEMETER_DB_PATH") {
+            let db_path = if let Some(path) = std::env::var("TYPEMETER_DB_PATH").ok().filter(|s| !s.is_empty()) {
                 let p = std::path::Path::new(&path);
                 if let Some(parent) = p.parent() {
                     std::fs::create_dir_all(parent)?;

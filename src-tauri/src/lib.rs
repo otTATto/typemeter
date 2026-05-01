@@ -99,7 +99,7 @@ pub fn run() {
             init_db(&db_path);
             app.manage(DbPath(db_path.clone()));
 
-            // rdev keyboard listener
+            // グローバルキーボードイベントのリスニング
             let sc_rdev = session_count_s.clone();
             let mc_rdev = minute_count_s.clone();
             thread::spawn(move || {
@@ -112,7 +112,7 @@ pub fn run() {
                 .expect("failed to start keyboard listener");
             });
 
-            // emit session count to frontend every second
+            // セッションカウントを 1 秒ごとにフロントエンドへ emit
             let sc_emit = session_count_s.clone();
             let app_handle = app.handle().clone();
             thread::spawn(move || loop {
@@ -121,7 +121,7 @@ pub fn run() {
                 let _ = app_handle.emit("keystroke_update", count);
             });
 
-            // persist minute count to SQLite every minute
+            // 1 分ごとに SQLite へ保存
             let mc_save = minute_count_s.clone();
             let db_path_save = db_path.clone();
             thread::spawn(move || loop {

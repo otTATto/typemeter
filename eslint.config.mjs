@@ -69,6 +69,7 @@ const eslintConfig = tseslint.config(
       ],
       // 使われていない import を削除
       'unused-imports/no-unused-imports': 'error',
+      '@typescript-eslint/no-unused-vars': 'off',
       // 同じライブラリから import されている module を 1 行に
       'import/no-duplicates': 'error',
     },

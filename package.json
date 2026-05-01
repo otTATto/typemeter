@@ -10,7 +10,7 @@
     "tauri": "tauri",
     "prepare": "husky",
     "lint": "eslint src/",
-    "lint:style": "stylelint \"src/**/*.vue\"",
+    "lint:style": "stylelint \"src/**/*.{vue,css}\"",
     "format": "oxfmt --write src/",
     "format:check": "oxfmt --check src/"
   },
@@ -39,13 +39,20 @@
     "vue-tsc": "^2.1.10"
   },
   "lint-staged": {
-    "*.{ts,vue}": [
-      "eslint --fix"
+    "*.vue": [
+      "eslint --fix",
+      "stylelint --fix",
+      "oxfmt --write"
     ],
-    "*.{css,vue}": [
-      "stylelint --fix"
+    "*.ts": [
+      "eslint --fix",
+      "oxfmt --write"
     ],
-    "*.{ts,vue,json,css,md}": [
+    "*.css": [
+      "stylelint --fix",
+      "oxfmt --write"
+    ],
+    "*.{json,md}": [
       "oxfmt --write"
     ]
   }

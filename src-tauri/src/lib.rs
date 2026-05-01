@@ -119,8 +119,7 @@ pub fn run() {
                 if let Err(e) = rdev::listen(move |event| {
                     if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
                         *mc_rdev.lock().unwrap() += 1;
-                        let today_total =
-                            *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
+                        let today_total = *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
                         let _ = app_handle_rdev_emit.emit("keystroke_update", today_total);
                     }
                 }) {

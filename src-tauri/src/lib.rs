@@ -27,7 +27,7 @@ fn init_db(db_path: &str) {
     .expect("failed to initialize database schema");
 }
 
-/// `minute_count` の現在値を SQLite に保存し、保存成功時に減算・`today_db_count` を加算する
+/// `minute_count` の現在値を SQLite に保存し、保存成功時に `today_db_count` を加算する
 ///
 /// # Parameters
 /// * `minute_count` - 直近の未保存キーストローク数
@@ -36,28 +36,37 @@ fn init_db(db_path: &str) {
 ///
 /// # Behavior
 /// * `minute_count` が 0 の場合は書き込みをスキップする
-/// * DB 書き込み成功後に保存した分だけ減算する（失敗時はカウントを保持）
-/// * 書き込み中に増加した分は `saturating_sub` により正しく保持される
+/// * ロック取得と同時にカウントを 0 にして「書き込み権」を確保し、IO 中の二重保存を防ぐ
+/// * DB 書き込み失敗時はカウントを加算して戻す
 /// * 1 分タイマーとアプリ終了時の両方から呼び出される
 fn flush_minute_count(
     minute_count: &Arc<Mutex<u64>>,
     today_db_count: &Arc<Mutex<u64>>,
     db_path: &str,
 ) {
-    let count = *minute_count.lock().unwrap();
-    if count > 0 {
-        if let Ok(conn) = Connection::open(db_path) {
-            let recorded_at = Local::now().to_rfc3339();
-            let result = conn.execute(
-                "INSERT INTO keystroke_logs (recorded_at, minute_count) VALUES (?1, ?2)",
-                params![recorded_at, count as i64],
-            );
-            if result.is_ok() {
-                let mut lock = minute_count.lock().unwrap();
-                *lock = lock.saturating_sub(count);
-                *today_db_count.lock().unwrap() += count;
-            }
+    let count = {
+        let mut lock = minute_count.lock().unwrap();
+        let count = *lock;
+        if count == 0 {
+            return;
         }
+        *lock = 0;
+        count
+    };
+
+    if let Ok(conn) = Connection::open(db_path) {
+        let recorded_at = Local::now().to_rfc3339();
+        let result = conn.execute(
+            "INSERT INTO keystroke_logs (recorded_at, minute_count) VALUES (?1, ?2)",
+            params![recorded_at, count as i64],
+        );
+        if result.is_ok() {
+            *today_db_count.lock().unwrap() += count;
+        } else {
+            *minute_count.lock().unwrap() += count;
+        }
+    } else {
+        *minute_count.lock().unwrap() += count;
     }
 }
 

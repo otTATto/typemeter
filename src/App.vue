@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { fetchTodayCount, subscribeKeystrokeUpdate } from './lib/keystroke';
 
 const todayCountAtStart = ref(0);
 const sessionCount = ref(0);
@@ -11,10 +10,9 @@ const todayTotal = computed(() => todayCountAtStart.value + sessionCount.value);
 let unlisten: (() => void) | null = null;
 
 onMounted(async () => {
-  todayCountAtStart.value = await invoke<number>('get_today_count');
-
-  unlisten = await listen<number>('keystroke_update', (event) => {
-    sessionCount.value = event.payload;
+  todayCountAtStart.value = await fetchTodayCount();
+  unlisten = await subscribeKeystrokeUpdate((count) => {
+    sessionCount.value = count;
   });
 });
 

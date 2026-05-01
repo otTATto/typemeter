@@ -8,6 +8,13 @@ use tauri::{Emitter, Manager, State};
 
 struct DbPath(String);
 
+/// SQLite データベースを初期化する
+///
+/// `db_path` が存在しない場合はファイルを作成し、`keystroke_logs` テーブルを作成する。
+/// 既にテーブルが存在する場合は何もしない。
+///
+/// # Panics
+/// DB のオープンまたはテーブル作成に失敗した場合パニックする（起動時の必須処理のため）。
 fn init_db(db_path: &str) {
     let conn = Connection::open(db_path).expect("failed to open database");
     conn.execute_batch(
@@ -20,6 +27,16 @@ fn init_db(db_path: &str) {
     .expect("failed to initialize database schema");
 }
 
+/// 今日のキーストローク合計を SQLite から取得する（Tauri コマンド）
+///
+/// `recorded_at` が今日の日付で始まる行の `minute_count` を合計して返す。
+///
+/// # Returns
+/// 今日保存済みのキーストローク数の合計。取得失敗時は `0`。
+///
+/// # Note
+/// 現在のセッションで未保存の直近 1 分間分は含まない。
+/// フロントエンドはこの値にセッションカウントを加算して今日の合計を表示する。
 #[tauri::command]
 fn get_today_count(db_path: State<DbPath>) -> u64 {
     let Ok(conn) = Connection::open(&db_path.0) else {

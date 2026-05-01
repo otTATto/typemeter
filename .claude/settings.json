@@ -10,6 +10,7 @@
       "Bash(grep *)",
       "Bash(npx tsc *)",
       "Bash(git checkout *)",
+      "WebSearch",
       "Read",
       "Edit",
       "Write"

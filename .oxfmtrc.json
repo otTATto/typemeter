@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  // インデントのサイズはスペース 2 つ
+  "tabWidth": 2,
+  // 半角スペースによるインデント
+  "useTabs": false,
+  // 末尾にセミコロン
+  "semi": true,
+  // 文字列の囲みはシングルクォーテーション
+  "singleQuote": true,
+  // 折り返す文字数
+  "printWidth": 100
+}

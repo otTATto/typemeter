@@ -7,11 +7,13 @@
 - 対話後の修正時に修正箇所に関する説明をコメントで強調しない（コードの最終的な読み手はその経緯を知らない）
 - コメントの量はその影響範囲、つまりどれだけ多くの場所から呼び出されるかに依存する
   - 他の場所から呼び出されうる定数・関数は丁寧に説明する
-  - 関数は JSDoc に近い書き方を心がける
+  - TypeScript の関数は JSDoc スタイルを、Rust の関数は Rustdoc スタイルを使う
 
 ## コメントの例
 
-### 型定義
+### TypeScript
+
+#### 型定義
 
 ```typescript
 // src/types/user.ts
@@ -34,7 +36,7 @@ export type Address = {
 };
 ```
 
-### 関数定義
+#### 関数定義
 
 ```typescript
 /**
@@ -61,4 +63,39 @@ export const formatOrderItems = async (
 ): Promise<Partial<OrderItems> | null> => {
   ...
 };
+```
+
+### Rust
+
+- `///` で記述する（`/** */` は使わない）
+- `@param` / `@returns` は使わない（JSDoc 記法は Rustdoc に認識されない）
+- `# Section` 見出しを使う。`cargo doc` でレンダリングされる
+- よく使うセクション:
+  - `# Parameters` — 引数の説明
+  - `# Returns` — 返り値の説明
+  - `# Errors` — `Result::Err` になる条件
+  - `# Panics` — パニックする条件
+  - `# Behavior` — 動作の詳細・注意事項
+  - `# Examples` — 使用例（`cargo test` で実行される）
+
+#### 関数定義
+
+```rust
+/// `minute_count` の現在値を SQLite に保存し、保存成功時に減算・`today_db_count` を加算する
+///
+/// # Parameters
+/// * `minute_count` - 直近の未保存キーストローク数
+/// * `today_db_count` - 今日の DB 保存済み合計（書き込み成功時にインクリメントされる）
+/// * `db_path` - データベースファイルのパス
+///
+/// # Behavior
+/// * `minute_count` が 0 の場合は書き込みをスキップする
+/// * DB 書き込み成功後に保存した分だけ減算する（失敗時はカウントを保持）
+fn flush_minute_count(
+    minute_count: &Arc<Mutex<u64>>,
+    today_db_count: &Arc<Mutex<u64>>,
+    db_path: &str,
+) {
+    ...
+}
 ```

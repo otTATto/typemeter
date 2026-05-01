@@ -1,0 +1,20 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Auto-generated files
+bun.lock
+
+# Rust (Tauri)
+src-tauri
+
+# Binary assets
+src/assets/**/*.webp
+src/assets/**/*.jpg
+src/assets/**/*.jpeg
+src/assets/**/*.png
+src/assets/**/*.gif
+src/assets/**/*.svg

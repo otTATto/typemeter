@@ -1,0 +1,38 @@
+# issue や PR のための label を定義します
+
+## Base
+- name: bug
+  color: D73A4A
+  description: 重大なバグ
+- name: chore
+  color: FEF2C0
+  description: 雑多な修正や更新
+- name: dev
+  color: 4A0FBB
+  description: CI/CD･build･lint/formatなどの構築/修正/設定など開発支援関連
+- name: docs
+  color: 0075CA
+  description: ドキュメントの追加や修正、更新
+- name: enhance
+  color: 00FBFF
+  description: 特に重要な実装
+- name: icebox
+  color: C5DEF5
+  description: wip、いつか解決したいが今は手を出せない
+- name: question
+  color: D4C5F9
+  description: 疑問や問題提起
+- name: UI/UX
+  color: BFDADC
+  description: 見た目やユーザー体験の向上
+- name: wont
+  color: FFFFFF
+  description: 必須ではない、エキストラな修正
+
+## Device
+- name: device:SP
+  color: D6D6D6
+  description: Mobile 端末関連
+- name: device:PC
+  color: D6D6D6
+  description: PC 関連

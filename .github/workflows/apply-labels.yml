@@ -1,0 +1,25 @@
+# labels.yml を読んで issue ラベルを適応する
+
+name: Apply Issue Labels
+
+on: 
+  workflow_dispatch: 
+  push: 
+    branches: 
+      - main
+      - master
+    paths:
+      - ".github/labels.yml"
+
+jobs:
+  issue-labeler:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: crazy-max/ghaction-github-labeler@v5
+        with:
+          yaml-file: ".github/labels.yml"
+          skip-delete: true

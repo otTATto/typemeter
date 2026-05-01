@@ -51,7 +51,7 @@ To develop with pre-generated data instead of real keystroke logs:
    ```
 2. Start the dev server with the mock database.
    ```sh
-   bun run tauri:mock
+   bun run tauri dev:mock
    ```
 
 ## Build

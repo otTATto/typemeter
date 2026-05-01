@@ -39,13 +39,13 @@
     "vue-tsc": "^2.1.10"
   },
   "lint-staged": {
-    "*.{js,vue}": [
+    "*.{ts,vue}": [
       "eslint --fix"
     ],
     "*.{css,vue}": [
       "stylelint --fix"
     ],
-    "*.{js,vue,json,css,md}": [
+    "*.{ts,vue,json,css,md}": [
       "oxfmt --write"
     ]
   }

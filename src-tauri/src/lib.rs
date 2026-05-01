@@ -29,15 +29,16 @@ fn init_db(db_path: &str) {
 
 /// `minute_count` の現在値を SQLite に保存し、保存成功時に減算・`today_db_count` を加算する
 ///
-/// @param minute_count 直近の未保存キーストローク数
-/// @param today_db_count 今日の DB 保存済み合計（成功時にインクリメントされる）
-/// @param db_path データベースファイルのパス
+/// # Parameters
+/// * `minute_count` - 直近の未保存キーストローク数
+/// * `today_db_count` - 今日の DB 保存済み合計（書き込み成功時にインクリメントされる）
+/// * `db_path` - データベースファイルのパス
 ///
-/// NOTE:
-///   - count が 0 の場合は書き込みをスキップする
-///   - DB 書き込み成功後に保存した分だけ減算する（書き込み失敗時はカウントを保持）
-///   - 書き込み中に増加した分は saturating_sub により正しく保持される
-///   - 1 分タイマーとアプリ終了時の両方から呼び出される
+/// # Behavior
+/// * `minute_count` が 0 の場合は書き込みをスキップする
+/// * DB 書き込み成功後に保存した分だけ減算する（失敗時はカウントを保持）
+/// * 書き込み中に増加した分は `saturating_sub` により正しく保持される
+/// * 1 分タイマーとアプリ終了時の両方から呼び出される
 fn flush_minute_count(
     minute_count: &Arc<Mutex<u64>>,
     today_db_count: &Arc<Mutex<u64>>,

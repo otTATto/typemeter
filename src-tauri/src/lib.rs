@@ -102,13 +102,15 @@ pub fn run() {
 
             // グローバルキーボードイベントのリスニング
             let mc_rdev = minute_count_s.clone();
+            let app_handle_rdev = app.handle().clone();
             thread::spawn(move || {
-                rdev::listen(move |event| {
+                if let Err(e) = rdev::listen(move |event| {
                     if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
                         *mc_rdev.lock().unwrap() += 1;
                     }
-                })
-                .expect("failed to start keyboard listener");
+                }) {
+                    let _ = app_handle_rdev.emit("listener_error", format!("{e:?}"));
+                }
             });
 
             // today_total を 1 秒ごとにフロントエンドへ emit（日付変更も検知）

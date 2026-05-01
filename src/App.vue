@@ -1,26 +1,38 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { subscribeKeystrokeUpdate } from './lib/keystroke';
+import { subscribeKeystrokeUpdate, subscribeListenerError } from './lib/keystroke';
 
 const todayTotal = ref(0);
+const listenerError = ref<string | null>(null);
 
-let unlisten: (() => void) | null = null;
+const unlisteners: Array<() => void> = [];
 
 onMounted(async () => {
-  unlisten = await subscribeKeystrokeUpdate((total) => {
-    todayTotal.value = total;
-  });
+  unlisteners.push(
+    await subscribeKeystrokeUpdate((total) => {
+      todayTotal.value = total;
+    }),
+    await subscribeListenerError((message) => {
+      listenerError.value = message;
+    }),
+  );
 });
 
 onUnmounted(() => {
-  unlisten?.();
+  unlisteners.forEach((fn) => fn());
 });
 </script>
 
 <template>
   <main class="container">
-    <p class="label">今日</p>
-    <p class="count">{{ todayTotal.toLocaleString() }}</p>
+    <template v-if="listenerError">
+      <p class="error-label">キーボード監視を開始できませんでした</p>
+      <p class="error-detail">{{ listenerError }}</p>
+    </template>
+    <template v-else>
+      <p class="label">今日</p>
+      <p class="count">{{ todayTotal.toLocaleString() }}</p>
+    </template>
   </main>
 </template>
 
@@ -63,5 +75,18 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0;
+}
+
+.error-label {
+  font-size: 1rem;
+  color: #e53e3e;
+  margin: 0;
+}
+
+.error-detail {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin: 0;
+  font-family: monospace;
 }
 </style>

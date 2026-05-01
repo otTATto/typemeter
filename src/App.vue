@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { subscribeKeystrokeUpdate, subscribeListenerError } from './lib/keystroke';
 
-const todayTotal = ref(0);
+const todayTotal = ref<number | null>(null);
 const listenerError = ref<string | null>(null);
 
 const unlisteners: Array<() => void> = [];
@@ -29,9 +29,12 @@ onUnmounted(() => {
       <p class="error-label">キーボード監視を開始できませんでした</p>
       <p class="error-detail">{{ listenerError }}</p>
     </template>
-    <template v-else>
+    <template v-else-if="todayTotal !== null">
       <p class="label">今日</p>
       <p class="count">{{ todayTotal.toLocaleString() }}</p>
+    </template>
+    <template v-else>
+      <p class="loading">読み込み中</p>
     </template>
   </main>
 </template>
@@ -88,5 +91,11 @@ onUnmounted(() => {
   opacity: 0.6;
   margin: 0;
   font-family: monospace;
+}
+
+.loading {
+  font-size: 1rem;
+  opacity: 0.4;
+  margin: 0;
 }
 </style>

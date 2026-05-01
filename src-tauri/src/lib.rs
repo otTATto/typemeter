@@ -100,20 +100,25 @@ pub fn run() {
             *today_db_count_s.lock().unwrap() = query_today_db_count(&db_path);
             app.manage(DbPath(db_path.clone()));
 
-            // グローバルキーボードイベントのリスニング
+            // グローバルキーボードイベントのリスニング（キー押下時に即 emit）
             let mc_rdev = minute_count_s.clone();
-            let app_handle_rdev = app.handle().clone();
+            let tdc_rdev = today_db_count_s.clone();
+            let app_handle_rdev_emit = app.handle().clone();
+            let app_handle_rdev_err = app.handle().clone();
             thread::spawn(move || {
                 if let Err(e) = rdev::listen(move |event| {
                     if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
                         *mc_rdev.lock().unwrap() += 1;
+                        let today_total =
+                            *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
+                        let _ = app_handle_rdev_emit.emit("keystroke_update", today_total);
                     }
                 }) {
-                    let _ = app_handle_rdev.emit("listener_error", format!("{e:?}"));
+                    let _ = app_handle_rdev_err.emit("listener_error", format!("{e:?}"));
                 }
             });
 
-            // today_total を 1 秒ごとにフロントエンドへ emit（日付変更も検知）
+            // ハートビート：初期表示・日付変更検知のため 1 秒ごとに emit
             let mc_emit = minute_count_s.clone();
             let tdc_emit = today_db_count_s.clone();
             let app_handle = app.handle().clone();

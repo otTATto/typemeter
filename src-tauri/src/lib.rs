@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use chrono::Local;
 use rusqlite::{params, Connection};
-use tauri::{Emitter, Manager, State};
+use tauri::{Emitter, Manager};
 
 struct DbPath(String);
 
@@ -27,9 +27,10 @@ fn init_db(db_path: &str) {
     .expect("failed to initialize database schema");
 }
 
-/// `minute_count` の現在値を SQLite に保存し、0 にリセットする
+/// `minute_count` の現在値を SQLite に保存し、保存成功時に減算・`today_db_count` を加算する
 ///
-/// @param minute_count 直近 1 分間のカウントを保持する Mutex
+/// @param minute_count 直近の未保存キーストローク数
+/// @param today_db_count 今日の DB 保存済み合計（成功時にインクリメントされる）
 /// @param db_path データベースファイルのパス
 ///
 /// NOTE:
@@ -37,7 +38,11 @@ fn init_db(db_path: &str) {
 ///   - DB 書き込み成功後に保存した分だけ減算する（書き込み失敗時はカウントを保持）
 ///   - 書き込み中に増加した分は saturating_sub により正しく保持される
 ///   - 1 分タイマーとアプリ終了時の両方から呼び出される
-fn flush_minute_count(minute_count: &Arc<Mutex<u64>>, db_path: &str) {
+fn flush_minute_count(
+    minute_count: &Arc<Mutex<u64>>,
+    today_db_count: &Arc<Mutex<u64>>,
+    db_path: &str,
+) {
     let count = *minute_count.lock().unwrap();
     if count > 0 {
         if let Ok(conn) = Connection::open(db_path) {
@@ -49,24 +54,18 @@ fn flush_minute_count(minute_count: &Arc<Mutex<u64>>, db_path: &str) {
             if result.is_ok() {
                 let mut lock = minute_count.lock().unwrap();
                 *lock = lock.saturating_sub(count);
+                *today_db_count.lock().unwrap() += count;
             }
         }
     }
 }
 
-/// 今日のキーストローク合計を SQLite から取得する（Tauri コマンド）
-///
-/// `recorded_at` が今日の日付で始まる行の `minute_count` を合計して返す。
+/// 今日の日付で保存された `keystroke_logs` の合計を SQLite から取得する
 ///
 /// # Returns
 /// 今日保存済みのキーストローク数の合計。取得失敗時は `0`。
-///
-/// # Note
-/// 現在のセッションで未保存の直近 1 分間分は含まない。
-/// フロントエンドはこの値にセッションカウントを加算して今日の合計を表示する。
-#[tauri::command]
-fn get_today_count(db_path: State<DbPath>) -> u64 {
-    let Ok(conn) = Connection::open(&db_path.0) else {
+fn query_today_db_count(db_path: &str) -> u64 {
+    let Ok(conn) = Connection::open(db_path) else {
         return 0;
     };
     let today = Local::now().format("%Y-%m-%d").to_string();
@@ -81,11 +80,11 @@ fn get_today_count(db_path: State<DbPath>) -> u64 {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let session_count = Arc::new(Mutex::new(0u64));
     let minute_count = Arc::new(Mutex::new(0u64));
+    let today_db_count = Arc::new(Mutex::new(0u64));
 
-    let session_count_s = session_count.clone();
     let minute_count_s = minute_count.clone();
+    let today_db_count_s = today_db_count.clone();
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -98,48 +97,58 @@ pub fn run() {
             let db_path = db_dir.join("keystroke.db").to_string_lossy().into_owned();
 
             init_db(&db_path);
+            *today_db_count_s.lock().unwrap() = query_today_db_count(&db_path);
             app.manage(DbPath(db_path.clone()));
 
             // グローバルキーボードイベントのリスニング
-            let sc_rdev = session_count_s.clone();
             let mc_rdev = minute_count_s.clone();
             thread::spawn(move || {
                 rdev::listen(move |event| {
                     if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
-                        *sc_rdev.lock().unwrap() += 1;
                         *mc_rdev.lock().unwrap() += 1;
                     }
                 })
                 .expect("failed to start keyboard listener");
             });
 
-            // セッションカウントを 1 秒ごとにフロントエンドへ emit
-            let sc_emit = session_count_s.clone();
+            // today_total を 1 秒ごとにフロントエンドへ emit（日付変更も検知）
+            let mc_emit = minute_count_s.clone();
+            let tdc_emit = today_db_count_s.clone();
             let app_handle = app.handle().clone();
-            thread::spawn(move || loop {
-                thread::sleep(Duration::from_secs(1));
-                let count = *sc_emit.lock().unwrap();
-                let _ = app_handle.emit("keystroke_update", count);
+            thread::spawn(move || {
+                let mut last_date = Local::now().format("%Y-%m-%d").to_string();
+                loop {
+                    thread::sleep(Duration::from_secs(1));
+                    let current_date = Local::now().format("%Y-%m-%d").to_string();
+                    if current_date != last_date {
+                        // 日付が変わったら今日の DB 合計をリセット
+                        *tdc_emit.lock().unwrap() = 0;
+                        last_date = current_date;
+                    }
+                    let today_total = *tdc_emit.lock().unwrap() + *mc_emit.lock().unwrap();
+                    let _ = app_handle.emit("keystroke_update", today_total);
+                }
             });
 
             // 1 分ごとに SQLite へ保存
             let mc_save = minute_count_s.clone();
+            let tdc_save = today_db_count_s.clone();
             let db_path_save = db_path.clone();
             thread::spawn(move || loop {
                 thread::sleep(Duration::from_secs(60));
-                flush_minute_count(&mc_save, &db_path_save);
+                flush_minute_count(&mc_save, &tdc_save, &db_path_save);
             });
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_today_count])
+        .invoke_handler(tauri::generate_handler![])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
     app.run(move |app_handle, event| {
         if let tauri::RunEvent::Exit = event {
             let db_path = app_handle.state::<DbPath>();
-            flush_minute_count(&minute_count, &db_path.0);
+            flush_minute_count(&minute_count, &today_db_count, &db_path.0);
         }
     });
 }

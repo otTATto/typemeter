@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { fetchTodayCount, subscribeKeystrokeUpdate } from './lib/keystroke';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { subscribeKeystrokeUpdate } from './lib/keystroke';
 
-const todayCountAtStart = ref(0);
-const sessionCount = ref(0);
-
-const todayTotal = computed(() => todayCountAtStart.value + sessionCount.value);
+const todayTotal = ref(0);
 
 let unlisten: (() => void) | null = null;
 
 onMounted(async () => {
-  todayCountAtStart.value = await fetchTodayCount();
-  unlisten = await subscribeKeystrokeUpdate((count) => {
-    sessionCount.value = count;
+  unlisten = await subscribeKeystrokeUpdate((total) => {
+    todayTotal.value = total;
   });
 });
 

@@ -34,21 +34,22 @@ fn init_db(db_path: &str) {
 ///
 /// NOTE:
 ///   - count が 0 の場合は書き込みをスキップする
+///   - DB 書き込み成功後に保存した分だけ減算する（書き込み失敗時はカウントを保持）
+///   - 書き込み中に増加した分は saturating_sub により正しく保持される
 ///   - 1 分タイマーとアプリ終了時の両方から呼び出される
 fn flush_minute_count(minute_count: &Arc<Mutex<u64>>, db_path: &str) {
-    let count = {
-        let mut lock = minute_count.lock().unwrap();
-        let c = *lock;
-        *lock = 0;
-        c
-    };
+    let count = *minute_count.lock().unwrap();
     if count > 0 {
         if let Ok(conn) = Connection::open(db_path) {
             let recorded_at = Local::now().to_rfc3339();
-            let _ = conn.execute(
+            let result = conn.execute(
                 "INSERT INTO keystroke_logs (recorded_at, minute_count) VALUES (?1, ?2)",
                 params![recorded_at, count as i64],
             );
+            if result.is_ok() {
+                let mut lock = minute_count.lock().unwrap();
+                *lock = lock.saturating_sub(count);
+            }
         }
     }
 }

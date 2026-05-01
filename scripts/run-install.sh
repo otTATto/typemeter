@@ -2,7 +2,7 @@
 
 # 第 1 引数と第 2 引数のコミット間で
 # bun.lock / package.json に差分があれば `bun install` を、
-# src-tauri/Cargo.toml に差分があれば `cargo fetch` を実行する
+# src-tauri/Cargo.toml / Cargo.lock に差分があれば `cargo fetch` を実行する
 
 set -e
 
@@ -16,14 +16,12 @@ if [[ -z "${OLD_REV}" || -z "${NEW_REV}" ]]; then
   exit 0
 fi
 
-CHANGED="$(git diff --name-only "${OLD_REV}" "${NEW_REV}" || true)"
-
-if echo "${CHANGED}" | grep -E -q '^(package\.json|bun\.lock)$'; then
+if ! git diff --quiet "${OLD_REV}" "${NEW_REV}" -- package.json bun.lock 2>/dev/null; then
   echo "👀 JS dependency differences detected. Running \`bun install\`..."
   bun install
 fi
 
-if echo "${CHANGED}" | grep -E -q '^src-tauri/Cargo\.toml$'; then
+if ! git diff --quiet "${OLD_REV}" "${NEW_REV}" -- src-tauri/Cargo.toml src-tauri/Cargo.lock 2>/dev/null; then
   echo "👀 Rust dependency differences detected. Running \`cargo fetch\`..."
   cargo fetch --manifest-path src-tauri/Cargo.toml
 fi

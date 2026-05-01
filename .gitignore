@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# モック DB（scripts/gen_mock_db.py で生成）
+mock/*.db
+src-tauri/mock/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

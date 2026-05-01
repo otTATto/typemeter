@@ -8,6 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:mock": "node scripts/dev-mock.js",
     "prepare": "husky",
     "lint": "eslint src/",
     "lint:style": "stylelint \"src/**/*.{vue,css}\"",

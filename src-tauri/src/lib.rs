@@ -102,7 +102,9 @@ pub fn run() {
             let db_path = if let Some(path) = std::env::var("TYPEMETER_DB_PATH").ok().filter(|s| !s.is_empty()) {
                 let p = std::path::Path::new(&path);
                 if let Some(parent) = p.parent() {
-                    std::fs::create_dir_all(parent)?;
+                    if !parent.as_os_str().is_empty() {
+                        std::fs::create_dir_all(parent)?;
+                    }
                 }
                 path
             } else {

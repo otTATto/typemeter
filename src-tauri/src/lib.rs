@@ -124,21 +124,64 @@ pub fn run() {
             app.manage(DbPath(db_path.clone()));
 
             // グローバルキーボードイベントのリスニング（キー押下時に即 emit）
-            let mc_rdev = minute_count_s.clone();
-            let tdc_rdev = today_db_count_s.clone();
-            let app_handle_rdev_emit = app.handle().clone();
-            let app_handle_rdev_err = app.handle().clone();
-            thread::spawn(move || {
-                if let Err(e) = rdev::listen(move |event| {
-                    if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
-                        *mc_rdev.lock().unwrap() += 1;
-                        let today_total = *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
-                        let _ = app_handle_rdev_emit.emit("keystroke_update", today_total);
+            //
+            // macOS: rdev は CGEventTap コールバック内で TSMGetInputSourceProperty を
+            //        呼び出すが、macOS Tahoe (26) でこの API がメインキュー必須になり
+            //        dispatch_assert_queue でクラッシュする。代わりに NSEvent の
+            //        グローバルモニターを使う。
+            // その他: rdev をそのまま使用する。
+            #[cfg(target_os = "macos")]
+            {
+                use block2::RcBlock;
+                use objc2_app_kit::{NSEvent, NSEventMask};
+                use std::ptr::NonNull;
+
+                let mc_ns = minute_count_s.clone();
+                let tdc_ns = today_db_count_s.clone();
+                let app_handle_emit = app.handle().clone();
+                let app_handle_err = app.handle().clone();
+
+                let handler = RcBlock::new(move |_event: NonNull<NSEvent>| {
+                    *mc_ns.lock().unwrap() += 1;
+                    let today_total = *tdc_ns.lock().unwrap() + *mc_ns.lock().unwrap();
+                    let _ = app_handle_emit.emit("keystroke_update", today_total);
+                });
+
+                match NSEvent::addGlobalMonitorForEventsMatchingMask_handler(
+                    NSEventMask::KeyDown,
+                    &handler,
+                ) {
+                    Some(monitor) => {
+                        // drop するとイベント監視が解除されるため意図的にリーク
+                        std::mem::forget(monitor);
                     }
-                }) {
-                    let _ = app_handle_rdev_err.emit("listener_error", format!("{e:?}"));
+                    None => {
+                        let _ = app_handle_err
+                            .emit("listener_error", "入力監視の開始に失敗しました");
+                    }
                 }
-            });
+                // handler は NSEvent が retain 済みのため drop しても監視は継続する
+            }
+
+            #[cfg(not(target_os = "macos"))]
+            {
+                let mc_rdev = minute_count_s.clone();
+                let tdc_rdev = today_db_count_s.clone();
+                let app_handle_rdev_emit = app.handle().clone();
+                let app_handle_rdev_err = app.handle().clone();
+                thread::spawn(move || {
+                    if let Err(e) = rdev::listen(move |event| {
+                        if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
+                            *mc_rdev.lock().unwrap() += 1;
+                            let today_total =
+                                *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
+                            let _ = app_handle_rdev_emit.emit("keystroke_update", today_total);
+                        }
+                    }) {
+                        let _ = app_handle_rdev_err.emit("listener_error", format!("{e:?}"));
+                    }
+                });
+            }
 
             // ハートビート：初期表示・日付変更検知のため 1 秒ごとに emit
             let mc_emit = minute_count_s.clone();

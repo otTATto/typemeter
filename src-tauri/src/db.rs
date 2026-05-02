@@ -19,7 +19,9 @@ pub fn init_db(db_path: &str) {
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             recorded_at  TEXT    NOT NULL,
             minute_count INTEGER NOT NULL
-        )",
+        );
+        CREATE INDEX IF NOT EXISTS idx_keystroke_logs_recorded_at
+            ON keystroke_logs (recorded_at);",
     )
     .expect("failed to initialize database schema");
 }

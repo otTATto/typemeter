@@ -260,12 +260,21 @@ pub fn run() {
                 });
                 let data_ptr = Box::into_raw(data) as *mut c_void;
 
+                // セッションイベントをアプリ側に注釈付きで届けるタップポイント
+                const KCG_ANNOTATED_SESSION_EVENT_TAP: u32 = 2;
+                // イベントパイプラインの末尾に追加（リッスン専用タップに適切）
+                const KCG_TAIL_APPEND_EVENT_TAP: u32 = 1;
+                // イベントを変更しないリッスン専用モード（デフォルト = 0 はイベント変更可）
+                const KCG_EVENT_TAP_OPTION_LISTEN_ONLY: u32 = 1;
+                // kCGEventKeyDown (= 10) に対応するビットマスク
+                const KCG_EVENT_KEY_DOWN_MASK: u64 = 1 << 10;
+
                 let tap = unsafe {
                     CGEventTapCreate(
-                        2,       // kCGAnnotatedSessionEventTap
-                        1,       // kCGTailAppendEventTap
-                        1,       // kCGEventTapOptionListenOnly
-                        1 << 10, // kCGEventKeyDown mask
+                        KCG_ANNOTATED_SESSION_EVENT_TAP,
+                        KCG_TAIL_APPEND_EVENT_TAP,
+                        KCG_EVENT_TAP_OPTION_LISTEN_ONLY,
+                        KCG_EVENT_KEY_DOWN_MASK,
                         tap_callback,
                         data_ptr,
                     )

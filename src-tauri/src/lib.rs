@@ -99,7 +99,10 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
-            let db_path = if let Some(path) = std::env::var("TYPEMETER_DB_PATH").ok().filter(|s| !s.is_empty()) {
+            let db_path = if let Some(path) = std::env::var("TYPEMETER_DB_PATH")
+                .ok()
+                .filter(|s| !s.is_empty())
+            {
                 let p = std::path::Path::new(&path);
                 if let Some(parent) = p.parent() {
                     if !parent.as_os_str().is_empty() {

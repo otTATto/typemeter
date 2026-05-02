@@ -99,12 +99,25 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
-            let db_dir = app
-                .path()
-                .app_data_dir()
-                .expect("failed to get app data dir");
-            std::fs::create_dir_all(&db_dir)?;
-            let db_path = db_dir.join("keystroke.db").to_string_lossy().into_owned();
+            let db_path = if let Some(path) = std::env::var("TYPEMETER_DB_PATH")
+                .ok()
+                .filter(|s| !s.is_empty())
+            {
+                let p = std::path::Path::new(&path);
+                if let Some(parent) = p.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+                }
+                path
+            } else {
+                let db_dir = app
+                    .path()
+                    .app_data_dir()
+                    .expect("failed to get app data dir");
+                std::fs::create_dir_all(&db_dir)?;
+                db_dir.join("keystroke.db").to_string_lossy().into_owned()
+            };
 
             init_db(&db_path);
             *today_db_count_s.lock().unwrap() = query_today_db_count(&db_path);

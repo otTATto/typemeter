@@ -14,13 +14,13 @@ TypeMeter records **only keystroke counts** — never the content of what you ty
 
 This is a desktop app built with [Tauri](https://tauri.app), a framework with a Rust-based backend and a Vue-based frontend.
 
-| Layer | Technology |
-|---|---|
-| Framework | [Tauri 2](https://tauri.app) |
-| Frontend | [Vue 3](https://vuejs.org) + TypeScript |
-| Backend | Rust |
-| Package manager | [Bun](https://bun.sh) |
-| Build tool | [Vite](https://vite.dev) |
+| Layer           | Technology                              |
+| --------------- | --------------------------------------- |
+| Framework       | [Tauri 2](https://tauri.app)            |
+| Frontend        | [Vue 3](https://vuejs.org) + TypeScript |
+| Backend         | Rust                                    |
+| Package manager | [Bun](https://bun.sh)                   |
+| Build tool      | [Vite](https://vite.dev)                |
 
 ## How to start development
 
@@ -33,13 +33,26 @@ This is a desktop app built with [Tauri](https://tauri.app), a framework with a 
 ### Steps
 
 1. Install dependencies.
-    ```sh
-    bun install
-    ```
+   ```sh
+   bun install
+   ```
 2. Start up a dev server.
-    ```sh
-    bun run tauri dev
-    ```
+   ```sh
+   bun run tauri dev
+   ```
+
+### Using mock data
+
+To develop with pre-generated data instead of real keystroke logs:
+
+1. Generate a mock database (60 days of random data).
+   ```sh
+   python scripts/gen_mock_db.py
+   ```
+2. Start the dev server with the mock database.
+   ```sh
+   bun run tauri:mock
+   ```
 
 ## Build
 

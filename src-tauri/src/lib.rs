@@ -291,6 +291,16 @@ pub fn run() {
                     }
                 });
             }
+            // macOS では赤×でウィンドウを閉じてもプロセスが残り Exit が来ないため、
+            // CloseRequested でフラッシュしてから明示的に終了する
+            tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::CloseRequested { .. },
+                ..
+            } => {
+                let db_path = app_handle.state::<DbPath>();
+                flush_minute_count(&minute_count, &today_db_count, &db_path.0);
+                app_handle.exit(0);
+            }
             tauri::RunEvent::Exit => {
                 let db_path = app_handle.state::<DbPath>();
                 flush_minute_count(&minute_count, &today_db_count, &db_path.0);

@@ -203,8 +203,7 @@ pub fn run() {
                     if let Err(e) = rdev::listen(move |event| {
                         if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
                             *mc_rdev.lock().unwrap() += 1;
-                            let today_total =
-                                *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
+                            let today_total = *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
                             let _ = app_handle_rdev_emit.emit("keystroke_update", today_total);
                         }
                     }) {
@@ -263,9 +262,9 @@ pub fn run() {
 
                 let tap = unsafe {
                     CGEventTapCreate(
-                        2, // kCGAnnotatedSessionEventTap
-                        1, // kCGTailAppendEventTap
-                        1, // kCGEventTapOptionListenOnly
+                        2,       // kCGAnnotatedSessionEventTap
+                        1,       // kCGTailAppendEventTap
+                        1,       // kCGEventTapOptionListenOnly
                         1 << 10, // kCGEventKeyDown mask
                         tap_callback,
                         data_ptr,
@@ -282,8 +281,7 @@ pub fn run() {
                 let tap_addr = tap as usize;
                 thread::spawn(move || {
                     let tap = tap_addr as *mut c_void;
-                    let source =
-                        unsafe { CFMachPortCreateRunLoopSource(std::ptr::null(), tap, 0) };
+                    let source = unsafe { CFMachPortCreateRunLoopSource(std::ptr::null(), tap, 0) };
                     let run_loop = unsafe { CFRunLoopGetCurrent() };
                     unsafe {
                         CFRunLoopAddSource(run_loop, source, kCFRunLoopCommonModes);

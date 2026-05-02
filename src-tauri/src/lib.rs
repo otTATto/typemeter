@@ -1,3 +1,5 @@
+#[cfg(target_os = "macos")]
+use std::ffi::c_void;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -6,7 +8,69 @@ use chrono::Local;
 use rusqlite::{params, Connection};
 use tauri::{Emitter, Manager};
 
+// 他アプリへのキー入力監視に必要な Input Monitoring 権限を要求する
+#[cfg(target_os = "macos")]
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGRequestListenEventAccess() -> bool;
+    fn CGEventTapCreate(
+        tap: u32,
+        place: u32,
+        options: u32,
+        events_of_interest: u64,
+        callback: unsafe extern "C" fn(*mut c_void, u32, *mut c_void, *mut c_void) -> *mut c_void,
+        user_info: *mut c_void,
+    ) -> *mut c_void;
+}
+
+#[cfg(target_os = "macos")]
+#[link(name = "CoreFoundation", kind = "framework")]
+extern "C" {
+    fn CFMachPortCreateRunLoopSource(
+        allocator: *const c_void,
+        port: *mut c_void,
+        order: isize,
+    ) -> *mut c_void;
+    fn CFRunLoopAddSource(rl: *mut c_void, source: *mut c_void, mode: *const c_void);
+    fn CFRunLoopGetCurrent() -> *mut c_void;
+    fn CFRunLoopRun();
+    fn CFRelease(cf: *const c_void);
+    static kCFRunLoopCommonModes: *const c_void;
+}
+
 struct DbPath(String);
+
+#[cfg(target_os = "macos")]
+struct TapUserData {
+    minute_count: Arc<Mutex<u64>>,
+    today_db_count: Arc<Mutex<u64>>,
+    app_handle: tauri::AppHandle,
+}
+
+/// CGEventTap コールバック
+///
+/// kCGEventKeyDown のみカウントする。TSM API（TSMGetInputSourceProperty 等）は
+/// 呼び出さないため、macOS Tahoe (26) での dispatch_assert_queue クラッシュは発生しない。
+#[cfg(target_os = "macos")]
+unsafe extern "C" fn tap_callback(
+    _proxy: *mut c_void,
+    event_type: u32,
+    event: *mut c_void,
+    user_info: *mut c_void,
+) -> *mut c_void {
+    const CG_EVENT_KEY_DOWN: u32 = 10;
+    if event_type == CG_EVENT_KEY_DOWN {
+        let data = &*(user_info as *const TapUserData);
+        let count = {
+            let mut mc = data.minute_count.lock().unwrap();
+            *mc += 1;
+            *mc
+        };
+        let today_total = *data.today_db_count.lock().unwrap() + count;
+        let _ = data.app_handle.emit("keystroke_update", today_total);
+    }
+    event
+}
 
 /// SQLite データベースを初期化する
 ///
@@ -96,6 +160,12 @@ pub fn run() {
     let minute_count_s = minute_count.clone();
     let today_db_count_s = today_db_count.clone();
 
+    // macOS: CGEventTap はイベントループ起動後（RunEvent::Ready）で登録する
+    #[cfg(target_os = "macos")]
+    let minute_count_ready = minute_count.clone();
+    #[cfg(target_os = "macos")]
+    let today_db_count_ready = today_db_count.clone();
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
@@ -124,21 +194,27 @@ pub fn run() {
             app.manage(DbPath(db_path.clone()));
 
             // グローバルキーボードイベントのリスニング（キー押下時に即 emit）
-            let mc_rdev = minute_count_s.clone();
-            let tdc_rdev = today_db_count_s.clone();
-            let app_handle_rdev_emit = app.handle().clone();
-            let app_handle_rdev_err = app.handle().clone();
-            thread::spawn(move || {
-                if let Err(e) = rdev::listen(move |event| {
-                    if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
-                        *mc_rdev.lock().unwrap() += 1;
-                        let today_total = *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
-                        let _ = app_handle_rdev_emit.emit("keystroke_update", today_total);
+            // macOS: CGEventTap を直接使用（TSM API を呼ばない最小限のコールバック）
+            //        RunEvent::Ready でイベントループ起動後に登録する
+            // その他: rdev をそのまま使用する
+            #[cfg(not(target_os = "macos"))]
+            {
+                let mc_rdev = minute_count_s.clone();
+                let tdc_rdev = today_db_count_s.clone();
+                let app_handle_rdev_emit = app.handle().clone();
+                let app_handle_rdev_err = app.handle().clone();
+                thread::spawn(move || {
+                    if let Err(e) = rdev::listen(move |event| {
+                        if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
+                            *mc_rdev.lock().unwrap() += 1;
+                            let today_total = *tdc_rdev.lock().unwrap() + *mc_rdev.lock().unwrap();
+                            let _ = app_handle_rdev_emit.emit("keystroke_update", today_total);
+                        }
+                    }) {
+                        let _ = app_handle_rdev_err.emit("listener_error", format!("{e:?}"));
                     }
-                }) {
-                    let _ = app_handle_rdev_err.emit("listener_error", format!("{e:?}"));
-                }
-            });
+                });
+            }
 
             // ハートビート：初期表示・日付変更検知のため 1 秒ごとに emit
             let mc_emit = minute_count_s.clone();
@@ -175,9 +251,74 @@ pub fn run() {
         .expect("error while building tauri application");
 
     app.run(move |app_handle, event| {
-        if let tauri::RunEvent::Exit = event {
-            let db_path = app_handle.state::<DbPath>();
-            flush_minute_count(&minute_count, &today_db_count, &db_path.0);
+        match event {
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Ready => {
+                // Input Monitoring 権限がなければシステム設定への誘導ダイアログを表示する
+                unsafe { CGRequestListenEventAccess() };
+
+                let data = Box::new(TapUserData {
+                    minute_count: minute_count_ready.clone(),
+                    today_db_count: today_db_count_ready.clone(),
+                    app_handle: app_handle.clone(),
+                });
+                let data_ptr = Box::into_raw(data) as *mut c_void;
+
+                // セッションイベントをアプリ側に注釈付きで届けるタップポイント
+                const KCG_ANNOTATED_SESSION_EVENT_TAP: u32 = 2;
+                // イベントパイプラインの末尾に追加（リッスン専用タップに適切）
+                const KCG_TAIL_APPEND_EVENT_TAP: u32 = 1;
+                // イベントを変更しないリッスン専用モード（デフォルト = 0 はイベント変更可）
+                const KCG_EVENT_TAP_OPTION_LISTEN_ONLY: u32 = 1;
+                // kCGEventKeyDown (= 10) に対応するビットマスク
+                const KCG_EVENT_KEY_DOWN_MASK: u64 = 1 << 10;
+
+                let tap = unsafe {
+                    CGEventTapCreate(
+                        KCG_ANNOTATED_SESSION_EVENT_TAP,
+                        KCG_TAIL_APPEND_EVENT_TAP,
+                        KCG_EVENT_TAP_OPTION_LISTEN_ONLY,
+                        KCG_EVENT_KEY_DOWN_MASK,
+                        tap_callback,
+                        data_ptr,
+                    )
+                };
+
+                if tap.is_null() {
+                    let _ = app_handle.emit("listener_error", "入力監視の開始に失敗しました");
+                    unsafe { drop(Box::from_raw(data_ptr as *mut TapUserData)) };
+                    return;
+                }
+
+                // *mut c_void は Send でないため usize で渡す（アドレス値のみ保持）
+                let tap_addr = tap as usize;
+                thread::spawn(move || {
+                    let tap = tap_addr as *mut c_void;
+                    let source = unsafe { CFMachPortCreateRunLoopSource(std::ptr::null(), tap, 0) };
+                    let run_loop = unsafe { CFRunLoopGetCurrent() };
+                    unsafe {
+                        CFRunLoopAddSource(run_loop, source, kCFRunLoopCommonModes);
+                        // source はランループが retain 済みのため自分側の参照を解放する
+                        CFRelease(source as *const c_void);
+                        // source が tap を retain 済みのため自分側の参照を解放する
+                        CFRelease(tap as *const c_void);
+                        CFRunLoopRun();
+                    }
+                });
+            }
+            // macOS では赤×でウィンドウを閉じてもプロセスが残り Exit が来ないため、
+            // CloseRequested でフラッシュしてから明示的に終了する
+            tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::CloseRequested { .. },
+                ..
+            } => {
+                app_handle.exit(0);
+            }
+            tauri::RunEvent::Exit => {
+                let db_path = app_handle.state::<DbPath>();
+                flush_minute_count(&minute_count, &today_db_count, &db_path.0);
+            }
+            _ => {}
         }
     });
 }

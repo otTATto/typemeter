@@ -298,7 +298,10 @@ pub fn run() {
                     let run_loop = unsafe { CFRunLoopGetCurrent() };
                     unsafe {
                         CFRunLoopAddSource(run_loop, source, kCFRunLoopCommonModes);
+                        // source はランループが retain 済みのため自分側の参照を解放する
                         CFRelease(source as *const c_void);
+                        // source が tap を retain 済みのため自分側の参照を解放する
+                        CFRelease(tap as *const c_void);
                         CFRunLoopRun();
                     }
                 });

@@ -61,8 +61,12 @@ unsafe extern "C" fn tap_callback(
     const CG_EVENT_KEY_DOWN: u32 = 10;
     if event_type == CG_EVENT_KEY_DOWN {
         let data = &*(user_info as *const TapUserData);
-        *data.minute_count.lock().unwrap() += 1;
-        let today_total = *data.today_db_count.lock().unwrap() + *data.minute_count.lock().unwrap();
+        let count = {
+            let mut mc = data.minute_count.lock().unwrap();
+            *mc += 1;
+            *mc
+        };
+        let today_total = *data.today_db_count.lock().unwrap() + count;
         let _ = data.app_handle.emit("keystroke_update", today_total);
     }
     event
@@ -305,8 +309,7 @@ pub fn run() {
                 event: tauri::WindowEvent::CloseRequested { .. },
                 ..
             } => {
-                let db_path = app_handle.state::<DbPath>();
-                flush_minute_count(&minute_count, &today_db_count, &db_path.0);
+                // exit(0) が RunEvent::Exit を発火させるため、フラッシュは Exit 側に一本化する
                 app_handle.exit(0);
             }
             tauri::RunEvent::Exit => {

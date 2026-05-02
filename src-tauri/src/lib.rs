@@ -309,7 +309,6 @@ pub fn run() {
                 event: tauri::WindowEvent::CloseRequested { .. },
                 ..
             } => {
-                // exit(0) が RunEvent::Exit を発火させるため、フラッシュは Exit 側に一本化する
                 app_handle.exit(0);
             }
             tauri::RunEvent::Exit => {

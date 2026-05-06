@@ -45,7 +45,12 @@ onUnmounted(() => {
   unlisteners.forEach((fn) => fn());
 });
 
-watch(targetDate, async (newDate) => {
+// < は過去方向（右スライド）、> / TODAY は未来方向（左スライド）
+const transitionDirection = ref<'left' | 'right'>('left');
+
+watch(targetDate, async (newDate, oldDate) => {
+  transitionDirection.value = newDate < oldDate ? 'right' : 'left';
+
   if (newDate === todayDate.value) {
     pastTotal.value = null;
     return;
@@ -85,42 +90,47 @@ const DAILY_GOAL = 10000;
         <div class="flex-1 flex justify-end"><ThemeToggle /></div>
       </header>
 
-      <!-- Main content card -->
-      <main
-        class="flex-1 flex flex-col items-center bg-pond-color rounded-t-[35px] pt-10 px-6 pb-6 overflow-y-auto"
-      >
-        <!-- Date -->
-        <p class="flex items-center gap-1 text-xl mb-4">
-          <span class="text-base-color">{{ targetDateParts.year }}</span>
-          <span class="text-sub-color">/</span>
-          <span class="text-base-color">{{ targetDateParts.month }}</span>
-          <span class="text-sub-color">/</span>
-          <span class="text-base-color">{{ targetDateParts.day }}</span>
-        </p>
-
-        <!-- Circular meter -->
-        <div class="-mb-5">
-          <MeterRing :value="displayTotal ?? 0" :goal="DAILY_GOAL" />
-        </div>
-
-        <!-- Keystroke count -->
-        <p
-          v-if="displayTotal !== null"
-          class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
-        >
-          <span
-            v-for="(char, i) in displayTotal.toLocaleString('en-US').split('')"
-            :key="i"
-            :class="char === ',' ? 'count-sep' : 'count-digit'"
-            >{{ char }}</span
+      <!-- Main content card（背景は固定、内部コンテンツのみスライド） -->
+      <main class="flex-1 relative overflow-hidden bg-pond-color rounded-t-[35px]">
+        <Transition :name="`slide-${transitionDirection}`">
+          <div
+            :key="targetDate"
+            class="content-area absolute inset-0 flex flex-col items-center pt-10 px-6 pb-6 overflow-y-auto"
           >
-        </p>
-        <p v-else class="flex items-center justify-center h-[5rem] mb-8 text-base opacity-40">
-          Loading
-        </p>
+            <!-- Date -->
+            <p class="flex items-center gap-1 text-xl mb-4">
+              <span class="text-base-color">{{ targetDateParts.year }}</span>
+              <span class="text-sub-color">/</span>
+              <span class="text-base-color">{{ targetDateParts.month }}</span>
+              <span class="text-sub-color">/</span>
+              <span class="text-base-color">{{ targetDateParts.day }}</span>
+            </p>
 
-        <!-- Day stamps chart -->
-        <DayStamps :date="targetDate" class="-mt-8" />
+            <!-- Circular meter -->
+            <div class="-mb-5">
+              <MeterRing :value="displayTotal ?? 0" :goal="DAILY_GOAL" />
+            </div>
+
+            <!-- Keystroke count -->
+            <p
+              v-if="displayTotal !== null"
+              class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
+            >
+              <span
+                v-for="(char, i) in displayTotal.toLocaleString('en-US').split('')"
+                :key="i"
+                :class="char === ',' ? 'count-sep' : 'count-digit'"
+                >{{ char }}</span
+              >
+            </p>
+            <p v-else class="flex items-center justify-center h-20 mb-8 text-base opacity-40">
+              Loading
+            </p>
+
+            <!-- Day stamps chart -->
+            <DayStamps :date="targetDate" class="-mt-8" />
+          </div>
+        </Transition>
       </main>
     </template>
   </div>
@@ -154,11 +164,65 @@ const DAILY_GOAL = 10000;
   text-align: center;
 }
 
-main {
+.content-area {
   scrollbar-width: none;
 }
 
-main::-webkit-scrollbar {
+.content-area::-webkit-scrollbar {
   display: none;
+}
+
+/* < ボタン: 旧コンテンツが右へ退場、新コンテンツが左から登場 */
+.slide-right-enter-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.15s ease,
+    filter 0.3s ease;
+}
+
+.slide-right-leave-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.1s ease,
+    filter 0.3s ease;
+}
+
+.slide-right-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+  filter: blur(25px);
+}
+
+.slide-right-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+  filter: blur(25px);
+}
+
+/* > / TODAY ボタン: 旧コンテンツが左へ退場、新コンテンツが右から登場 */
+.slide-left-enter-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.15s ease,
+    filter 0.3s ease;
+}
+
+.slide-left-leave-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.1s ease,
+    filter 0.3s ease;
+}
+
+.slide-left-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+  filter: blur(25px);
+}
+
+.slide-left-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+  filter: blur(25px);
 }
 </style>

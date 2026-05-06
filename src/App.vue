@@ -86,7 +86,7 @@ const DAILY_GOAL = 10000;
         <p v-else class="text-base opacity-40 mb-8">Loading</p>
 
         <!-- Day stamps chart -->
-        <DayStamps :today-total="todayTotal ?? 0" />
+        <DayStamps />
       </main>
     </template>
   </div>

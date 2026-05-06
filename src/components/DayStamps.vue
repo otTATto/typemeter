@@ -1,71 +1,90 @@
-<!-- 過去 N 日分の入力数をドットグリッドで可視化するスタンプチャート -->
-<!-- x 軸 = 日インデックス（0 = 最古、TODAY_INDEX = 今日）-->
-<!-- y 軸 = カウントレベル（1000 刻み）、そのレベルに到達した日のドットを緑で塗りつぶす -->
-<!-- App.vue メインカードから <DayStamps :today-total="todayTotal" /> として呼ばれる -->
+<!-- 今日の時間帯別タイプ数をドットグリッドで可視化するスタンプチャート -->
+<!-- x 軸 = 時間帯（0〜23時）、y 軸 = カウントレベル（1000 刻み） -->
+<!-- App.vue メインカードから <DayStamps /> として呼ばれる -->
 <script setup lang="ts">
-const props = defineProps<{
-  todayTotal: number;
-}>();
+const currentHour = new Date().getHours();
 
-// Day stamps chart:
-//   x-axis = day index (0 = oldest, TODAY_INDEX = today)
-//   y-axis = count level (1000, 2000, ..., 10000)
-//   Each dot is green if that day reached that level, gray otherwise.
-const TOTAL_DAYS = 24;
-const TODAY_INDEX = 10;
+/**
+ * 時間帯別タイプ数のモックデータ（バックエンド実装後に差し替え予定）
+ * インデックス = 時（0〜23）、値 = その時間帯のタイプ数
+ */
+const MOCK_HOURLY_DATA: number[] = [
+  0, 0, 0, 200, 800, 2100, 4500, 6800, 8200, 7600, 5500, 3200, 2800, 4100, 6200, 8900, 7400, 5100,
+  3600, 2200, 1100, 500, 100, 0,
+];
 
-/** Mock daily totals; index = day index (TODAY_INDEX = today) */
-const MOCK_DAY_TOTALS: Record<number, number> = {
-  1: 1100,
-  2: 3200,
-  3: 5800,
-  4: 7200,
-  5: 6100,
-  6: 8900,
-  7: 3200,
-  8: 5400,
-  9: 9100,
-};
-
+/**
+ * - LEVELS              : Y 軸のカウントレベル（1000 刻み）
+ * - Y_AXIS_LABELS       : Y 軸に表示するレベルの抜粋
+ * - ALWAYS_VISIBLE_HOURS: X 軸で常に sub-color 表示する時刻（3 時間刻み + 23 時）
+ * - HOURS               : 時間インデックス（0〜23）の配列
+ */
 const LEVELS = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
-const X_AXIS_LABELS = [0, 3, 6, 9, 10, 12, 15, 18, 21, 23];
 const Y_AXIS_LABELS = [1000, 5000, 10000];
+const ALWAYS_VISIBLE_HOURS = new Set([0, 3, 6, 9, 12, 15, 18, 21, 23]);
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
+/**
+ * SVG ジオメトリ。ドット端から目盛ラベルまで LABEL_GAP = 10px を確保する
+ *
+ * - DOT_R        : ドットの半径（px）
+ * - CHART_LEFT   : ドットグリッド左端 X 座標。"10,000"（~36px）+ LABEL_GAP + DOT_R が収まる幅を確保
+ * - CHART_RIGHT  : ドットグリッド右端 X 座標（CHART_LEFT と対称）
+ * - CHART_TOP    : ドットグリッド上端 Y 座標。DOT_R 分の上端クリップを防ぐ余白
+ * - CHART_BOTTOM : ドットグリッド下端 Y 座標。CHART_TOP 増分を加算して縦スパンを維持
+ * - LABEL_GAP    : ドット端から目盛ラベルまでの余白（px）
+ * - VIEWBOX_WIDTH: SVG viewBox の幅（px）
+ */
 const DOT_R = 8;
-const CHART_LEFT = 36;
-const CHART_RIGHT = 624;
-const CHART_TOP = 0;
-const CHART_BOTTOM = 250;
+const CHART_LEFT = 60;
+const CHART_RIGHT = 600;
+const CHART_TOP = 12;
+const CHART_BOTTOM = 262;
+const LABEL_GAP = 10;
+const VIEWBOX_WIDTH = 660;
 
-const DAY_INDICES = Array.from({ length: TOTAL_DAYS }, (_, i) => i);
+/**
+ * 目盛ラベルの座標。両側の Y 軸ラベルは text-anchor="end" で右端揃え
+ *
+ * - Y_LABEL_LEFT_X : 左ラベルの右端 X 座標（= ドット左端 − LABEL_GAP）
+ * - Y_LABEL_RIGHT_X: 右ラベルの右端 X 座標（= viewBox 右端 − 左端余白 6px、ドット右端との差 = LABEL_GAP）
+ * - X_LABEL_Y      : X 軸ラベルのベースライン Y 座標（= ドット下端 + LABEL_GAP + Manjari 12px キャップハイト ~9px）
+ */
+const Y_LABEL_LEFT_X = CHART_LEFT - DOT_R - LABEL_GAP;
+const Y_LABEL_RIGHT_X = VIEWBOX_WIDTH - 6;
+const X_LABEL_Y = CHART_BOTTOM + DOT_R + LABEL_GAP + 9;
 
-const dotX = (dayIdx: number) =>
-  CHART_LEFT + (dayIdx / (TOTAL_DAYS - 1)) * (CHART_RIGHT - CHART_LEFT);
+const dotX = (hour: number) => CHART_LEFT + (hour / 23) * (CHART_RIGHT - CHART_LEFT);
 
 const dotY = (level: number) =>
   CHART_BOTTOM - ((level - 1000) / (10000 - 1000)) * (CHART_BOTTOM - CHART_TOP);
 
-const dayTotal = (dayIdx: number) =>
-  dayIdx === TODAY_INDEX ? props.todayTotal : (MOCK_DAY_TOTALS[dayIdx] ?? 0);
-
-const dotFill = (dayIdx: number, level: number) =>
-  dayTotal(dayIdx) >= level ? 'var(--accent-color)' : 'var(--sub-color)';
-
-const dotOpacity = (dayIdx: number, level: number) => {
-  if (dayTotal(dayIdx) < level) return 0.3;
-  const age = TODAY_INDEX - dayIdx;
-  return Math.max(0.4, 1 - age * 0.06);
+/**
+ * @function X 軸ラベルの CSS クラスを返す
+ *
+ * @param hour 時（0〜23）
+ * @returns Tailwind クラス文字列
+ *
+ * NOTE:
+ *   - 現在時刻: accent-color（アクティブ）
+ *   - ALWAYS_VISIBLE_HOURS に含まれる時刻: sub-color（常時表示）
+ *   - それ以外: pond-color（実質不可視）
+ */
+const labelClass = (hour: number): string => {
+  if (hour === currentHour) return 'fill-accent-color! font-bold';
+  if (ALWAYS_VISIBLE_HOURS.has(hour)) return 'fill-sub-color';
+  return 'fill-pond-color';
 };
 </script>
 
 <template>
   <div class="w-full max-w-165 shrink-0">
-    <svg width="100%" viewBox="0 0 660 290" aria-label="過去の入力数チャート">
+    <svg width="100%" viewBox="0 0 660 296" aria-label="今日の時間帯別タイプ数チャート">
       <!-- Y-axis labels (left) -->
       <text
         v-for="label in Y_AXIS_LABELS"
         :key="`yl-${label}`"
-        :x="CHART_LEFT - 6"
+        :x="Y_LABEL_LEFT_X"
         :y="dotY(label) + 4"
         class="text-xs fill-sub-color"
         text-anchor="end"
@@ -77,41 +96,40 @@ const dotOpacity = (dayIdx: number, level: number) => {
       <text
         v-for="label in Y_AXIS_LABELS"
         :key="`yr-${label}`"
-        :x="CHART_RIGHT + 6"
+        :x="Y_LABEL_RIGHT_X"
         :y="dotY(label) + 4"
         class="text-xs fill-sub-color"
-        text-anchor="start"
+        text-anchor="end"
       >
         {{ label.toLocaleString('en-US') }}
       </text>
 
-      <!-- Dot grid: TOTAL_DAYS columns × LEVELS rows -->
-      <template v-for="dayIdx in DAY_INDICES" :key="`col-${dayIdx}`">
+      <!-- Dot grid: 24 columns (hours) × 10 rows (levels) -->
+      <template v-for="hour in HOURS" :key="`col-${hour}`">
         <circle
           v-for="level in LEVELS"
-          :key="`dot-${dayIdx}-${level}`"
-          :cx="dotX(dayIdx)"
+          :key="`dot-${hour}-${level}`"
+          :cx="dotX(hour)"
           :cy="dotY(level)"
           :r="DOT_R"
-          :fill="dotFill(dayIdx, level)"
-          :opacity="dotOpacity(dayIdx, level)"
+          :class="
+            MOCK_HOURLY_DATA[hour] >= level ? 'fill-accent-color' : 'fill-sub-color opacity-35'
+          "
         />
       </template>
 
       <!-- X-axis labels -->
-      <g transform="translate(0, 265)">
-        <text
-          v-for="label in X_AXIS_LABELS"
-          :key="label"
-          :x="dotX(label)"
-          y="0"
-          class="text-xs fill-sub-color"
-          :class="{ 'fill-accent-color! font-bold': label === TODAY_INDEX }"
-          text-anchor="middle"
-        >
-          {{ label }}
-        </text>
-      </g>
+      <text
+        v-for="hour in HOURS"
+        :key="hour"
+        :x="dotX(hour)"
+        :y="X_LABEL_Y"
+        class="text-xs"
+        :class="labelClass(hour)"
+        text-anchor="middle"
+      >
+        {{ hour }}
+      </text>
     </svg>
   </div>
 </template>

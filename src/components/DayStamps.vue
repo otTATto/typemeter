@@ -74,6 +74,26 @@ const dotY = (level: number) =>
   CHART_BOTTOM - ((level - 1000) / (10000 - 1000)) * (CHART_BOTTOM - CHART_TOP);
 
 /**
+ * @function ドットの SVG fill 値を返す
+ *
+ * @param hour 時（0〜23）
+ * @param level カウントレベル（1000 刻み）
+ * @returns CSS fill 値
+ *
+ * NOTE:
+ *   count ≥ level なら accent-color、count ≤ level - 1000 なら background-color。
+ *   その中間では oklch 空間で比率ブレンドした color-mix() 値を返す。
+ */
+const dotFill = (hour: number, level: number): string => {
+  const count = hourlyData.value[hour];
+  if (count >= level) return 'var(--accent-color)';
+  const prevLevel = level - 1000;
+  if (count <= prevLevel) return 'var(--background-color)';
+  const pct = Math.round(((count - prevLevel) / 1000) * 100);
+  return `color-mix(in oklch, var(--accent-color) ${pct}%, white)`;
+};
+
+/**
  * @function X 軸ラベルの CSS クラスを返す
  *
  * @param hour 時（0〜23）
@@ -126,7 +146,7 @@ const labelClass = (hour: number): string => {
           :cx="dotX(hour)"
           :cy="dotY(level)"
           :r="DOT_R"
-          :class="hourlyData[hour] >= level ? 'fill-accent-color' : 'fill-sub-color opacity-35'"
+          :style="{ fill: dotFill(hour, level) }"
         />
       </template>
 

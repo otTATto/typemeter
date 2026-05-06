@@ -5,8 +5,9 @@
   --color-tm-white: oklch(99.7% 0.003 85deg);
   --color-tm-ivory: oklch(98% 0.005 80deg);
   --color-tm-gray: oklch(85% 0.01 80deg);
-  --color-tm-black: oklch(45% 0.01 80deg);
-  --color-tm-dark-black: oklch(35% 0.01 80deg);
+  --color-tm-reddish-black: oklch(45% 0.01 80deg);
+  --color-tm-dark-black: oklch(40% 0.0098 73deg);
+  --color-tm-black: oklch(35% 0.01 80deg);
   --color-tm-green: oklch(80% 0.05 170deg);
 }
 
@@ -42,7 +43,7 @@
   --pond-color: var(--color-tm-white);
   --background-color: var(--color-tm-ivory);
   --sub-color: var(--color-tm-gray);
-  --base-color: var(--color-tm-black);
+  --base-color: var(--color-tm-reddish-black);
   --accent-color: var(--color-tm-green);
 
   font-family: Manjari, Inter, Avenir, Helvetica, Arial, sans-serif;
@@ -55,8 +56,8 @@
 
 /* Dark mode — ThemeToggle が html.dark クラスを付け外しして切り替える */
 html.dark {
-  --pond-color: var(--color-tm-black);
-  --background-color: var(--color-tm-dark-black);
+  --pond-color: var(--color-tm-dark-black);
+  --background-color: var(--color-tm-black);
   --sub-color: var(--color-tm-gray);
   --base-color: var(--color-tm-ivory);
   --accent-color: var(--color-tm-green);

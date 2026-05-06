@@ -26,7 +26,7 @@ onUnmounted(() => {
 <template>
   <main class="container">
     <template v-if="listenerError">
-      <p class="error-label">Can not start to capture keystrokes.</p>
+      <p class="error-label">Failed to start capturing keystrokes.</p>
       <p class="error-detail">{{ listenerError }}</p>
     </template>
     <template v-else-if="todayTotal !== null">

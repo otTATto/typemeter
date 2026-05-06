@@ -58,7 +58,7 @@ const DAILY_GOAL = 10000;
         class="flex-1 flex flex-col items-center bg-pond-color rounded-t-[35px] pt-10 px-6 pb-6 overflow-hidden"
       >
         <!-- Date -->
-        <p class="flex items-center gap-1 text-xl mb-8">
+        <p class="flex items-center gap-1 text-xl mb-4">
           <span class="text-base-color">{{ dateYear }}</span>
           <span class="text-sub-color">/</span>
           <span class="text-base-color">{{ dateMonth }}</span>
@@ -67,7 +67,7 @@ const DAILY_GOAL = 10000;
         </p>
 
         <!-- Circular meter -->
-        <div class="mb-6">
+        <div class="-mb-5">
           <MeterRing :value="todayTotal ?? 0" :goal="DAILY_GOAL" />
         </div>
 

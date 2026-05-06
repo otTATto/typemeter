@@ -53,13 +53,11 @@
   background-color: var(--background-color);
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --pond-color: var(--color-tm-black);
-    --background-color: var(--color-tm-dark-black);
-    --sub-color: var(--color-tm-gray);
-    --base-color: var(--color-tm-ivory);
-    --accent-color: var(--color-tm-green);
-  }
+/* Dark mode — ThemeToggle が html.dark クラスを付け外しして切り替える */
+html.dark {
+  --pond-color: var(--color-tm-black);
+  --background-color: var(--color-tm-dark-black);
+  --sub-color: var(--color-tm-gray);
+  --base-color: var(--color-tm-ivory);
+  --accent-color: var(--color-tm-green);
 }

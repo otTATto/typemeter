@@ -1,0 +1,64 @@
+@import 'tailwindcss';
+
+/* Primitive colors */
+@theme {
+  --color-tm-white: oklch(99.7% 0.003 85deg);
+  --color-tm-ivory: oklch(98% 0.005 80deg);
+  --color-tm-gray: oklch(85% 0.01 80deg);
+  --color-tm-reddish-black: oklch(45% 0.01 80deg);
+  --color-tm-dark-black: oklch(40% 0.0098 73deg);
+  --color-tm-black: oklch(35% 0.01 80deg);
+  --color-tm-green: oklch(80% 0.05 170deg);
+}
+
+@font-face {
+  font-family: Manjari;
+  src: url('/fonts/Manjari/Manjari-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: Manjari;
+  src: url('/fonts/Manjari/Manjari-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  line-gap-override: 0%;
+}
+
+/* Semantic colors — inline で CSS 変数参照をそのまま使い、ダークモードの切り替えに対応する */
+@theme inline {
+  --color-pond-color: var(--pond-color);
+  --color-background-color: var(--background-color);
+  --color-sub-color: var(--sub-color);
+  --color-base-color: var(--base-color);
+  --color-accent-color: var(--accent-color);
+}
+
+/* Light mode */
+:root {
+  --pond-color: var(--color-tm-white);
+  --background-color: var(--color-tm-ivory);
+  --sub-color: var(--color-tm-gray);
+  --base-color: var(--color-tm-reddish-black);
+  --accent-color: var(--color-tm-green);
+
+  font-family: Manjari, Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizelegibility;
+  -webkit-font-smoothing: antialiased;
+  color: var(--base-color);
+  background-color: var(--background-color);
+}
+
+/* Dark mode — ThemeToggle が html.dark クラスを付け外しして切り替える */
+html.dark {
+  --pond-color: var(--color-tm-dark-black);
+  --background-color: var(--color-tm-black);
+  --sub-color: var(--color-tm-gray);
+  --base-color: var(--color-tm-ivory);
+  --accent-color: var(--color-tm-green);
+}

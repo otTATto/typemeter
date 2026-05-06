@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
 /**
@@ -26,3 +27,12 @@ export const subscribeKeystrokeUpdate = (
  */
 export const subscribeListenerError = (callback: (message: string) => void): Promise<() => void> =>
   listen<string>('listener_error', (event) => callback(event.payload));
+
+/**
+ * @function 指定日の時間帯別キーストローク数を取得する
+ *
+ * @param date 対象日付（`YYYY-MM-DD` 形式）
+ * @returns 長さ 24 の配列。インデックス = 時（0〜23）、値 = その時間帯のキーストローク数
+ */
+export const fetchHourlyCounts = (date: string): Promise<number[]> =>
+  invoke<number[]>('get_hourly_counts', { date });

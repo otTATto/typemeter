@@ -1,3 +1,5 @@
+<!-- DAY / DAYS 表示切り替えタブ -->
+<!-- App.vue ヘッダー左側に配置される -->
 <script setup lang="ts">
 import { CalendarDays, CalendarRange } from 'lucide-vue-next';
 </script>

@@ -1,3 +1,7 @@
+<!-- 過去 N 日分の入力数をドットグリッドで可視化するスタンプチャート -->
+<!-- x 軸 = 日インデックス（0 = 最古、TODAY_INDEX = 今日）-->
+<!-- y 軸 = カウントレベル（1000 刻み）、そのレベルに到達した日のドットを緑で塗りつぶす -->
+<!-- App.vue メインカードから <DayStamps :today-total="todayTotal" /> として呼ばれる -->
 <script setup lang="ts">
 const props = defineProps<{
   todayTotal: number;

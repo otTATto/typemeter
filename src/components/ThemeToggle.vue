@@ -1,3 +1,6 @@
+<!-- ライト / ダークモード切り替えトグルスイッチ -->
+<!-- 実際の切り替えは CSS の prefers-color-scheme media query に委ねており、このコンポーネントは見た目のみ -->
+<!-- App.vue ヘッダー右側に配置される -->
 <script setup lang="ts">
 import { Sun } from 'lucide-vue-next';
 </script>

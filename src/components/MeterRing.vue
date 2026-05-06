@@ -1,3 +1,5 @@
+<!-- 今日の入力数を目標値に対する割合で示す SVG 円弧メーター -->
+<!-- App.vue メインカードから <MeterRing :value="todayTotal" :goal="DAILY_GOAL" /> として呼ばれる -->
 <script setup lang="ts">
 import { computed } from 'vue';
 

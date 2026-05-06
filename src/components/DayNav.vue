@@ -1,3 +1,5 @@
+<!-- 表示日を切り替える ‹ TODAY › ナビゲーション -->
+<!-- App.vue ヘッダー中央に配置される -->
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 </script>

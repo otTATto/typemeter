@@ -5,22 +5,31 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { fetchHourlyCounts, subscribeKeystrokeUpdate } from '@/lib/keystroke';
 
-const currentHour = new Date().getHours();
+const currentHour = ref(new Date().getHours());
 
 const hourlyData = ref<number[]>(Array(24).fill(0));
 
 // 今日の日付のみリアルタイム更新する（他の日付は onMounted の一度取得のみ）
-const todayDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+const todayDate = ref(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD
 
 const loadTodayHourlyData = async () => {
-  hourlyData.value = await fetchHourlyCounts(todayDate);
+  hourlyData.value = await fetchHourlyCounts(todayDate.value);
 };
 
 let unlisten: (() => void) | null = null;
 
 onMounted(async () => {
   await loadTodayHourlyData();
-  unlisten = await subscribeKeystrokeUpdate(() => loadTodayHourlyData());
+  unlisten = await subscribeKeystrokeUpdate(() => {
+    const now = new Date();
+    const newDate = now.toLocaleDateString('en-CA');
+    currentHour.value = now.getHours();
+    if (newDate !== todayDate.value) {
+      todayDate.value = newDate;
+      hourlyData.value = Array(24).fill(0);
+    }
+    loadTodayHourlyData();
+  });
 });
 
 onUnmounted(() => {
@@ -161,7 +170,7 @@ const dotFill = (hour: number, level: number): string => {
  *   - それ以外: pond-color（実質不可視）
  */
 const labelClass = (hour: number): string => {
-  if (hour === currentHour) return 'fill-accent-color! font-bold';
+  if (hour === currentHour.value) return 'fill-accent-color! font-bold';
   if (ALWAYS_VISIBLE_HOURS.has(hour)) return 'fill-sub-color';
   return 'fill-pond-color';
 };

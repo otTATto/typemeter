@@ -2,7 +2,7 @@
 <!-- x 軸 = 時間帯（0〜23時）、y 軸 = カウントレベル（1000 刻み） -->
 <!-- App.vue メインカードから <DayStamps /> として呼ばれる -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { fetchHourlyCounts, subscribeKeystrokeUpdate } from '@/lib/keystroke';
 
 const currentHour = new Date().getHours();
@@ -26,6 +26,8 @@ onMounted(async () => {
 onUnmounted(() => {
   unlisten?.();
 });
+
+const hoveredHour = ref<number | null>(null);
 
 /**
  * - LEVELS              : Y 軸のカウントレベル（1000 刻み）
@@ -52,10 +54,64 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const DOT_R = 8;
 const CHART_LEFT = 60;
 const CHART_RIGHT = 600;
-const CHART_TOP = 12;
-const CHART_BOTTOM = 262;
+const CHART_TOP = 46; // ツールチップ領域（22px）+ 三角形（7px）+ 余白（17px）
+const CHART_BOTTOM = 296; // CHART_TOP 増分（+10）を加算
 const LABEL_GAP = 10;
 const VIEWBOX_WIDTH = 660;
+
+/**
+ * ツールチップ
+ *
+ * - TOOLTIP_MIN_W: ツールチップの最小幅（px）
+ * - COL_W        : ドット列の間隔（px）。ホバー列の強調幅として使用
+ */
+const TOOLTIP_MIN_W = 80;
+const COL_W = (CHART_RIGHT - CHART_LEFT) / 23;
+
+/**
+ * @function SVG 上のマウス座標から最近傍の列（時）を算出してホバー状態を更新する
+ *
+ * @param event MouseEvent（SVG 要素に紐付く）
+ */
+const onSvgMouseMove = (event: MouseEvent) => {
+  const svgEl = event.currentTarget as SVGSVGElement;
+  const { left, width } = svgEl.getBoundingClientRect();
+  const svgX = ((event.clientX - left) / width) * VIEWBOX_WIDTH;
+  const hour = Math.round(((svgX - CHART_LEFT) / (CHART_RIGHT - CHART_LEFT)) * 23);
+  hoveredHour.value = hour >= 0 && hour <= 23 ? hour : null;
+};
+
+const onSvgMouseLeave = () => {
+  hoveredHour.value = null;
+};
+
+/** ツールチップ X 座標（viewBox 端からはみ出さないようクランプ済み） */
+const tooltipX = computed(() => {
+  if (hoveredHour.value === null) return 0;
+  const x = CHART_LEFT + (hoveredHour.value / 23) * (CHART_RIGHT - CHART_LEFT);
+  const w = tooltipWidth.value;
+  return Math.min(Math.max(x, w / 2), VIEWBOX_WIDTH - w / 2);
+});
+
+/** ツールチップに表示するテキスト */
+const tooltipText = computed(() => {
+  if (hoveredHour.value === null) return '';
+  const count = hourlyData.value[hoveredHour.value] ?? 0;
+  return `${hoveredHour.value}:00 — ${count.toLocaleString('en-US')}`;
+});
+
+/** ツールチップテキスト要素への参照（getComputedTextLength で動的幅算出に使用） */
+const tooltipTextEl = ref<SVGTextElement | null>(null);
+
+/** ツールチップの現在幅（テキスト長 + 水平パディング 24px、最小 TOOLTIP_MIN_W） */
+const tooltipWidth = ref(TOOLTIP_MIN_W);
+
+watch(tooltipText, async () => {
+  await nextTick();
+  tooltipWidth.value = tooltipTextEl.value
+    ? Math.max(Math.ceil(tooltipTextEl.value.getComputedTextLength()) + 24, TOOLTIP_MIN_W)
+    : TOOLTIP_MIN_W;
+});
 
 /**
  * 目盛ラベルの座標。両側の Y 軸ラベルは text-anchor="end" で右端揃え
@@ -113,7 +169,13 @@ const labelClass = (hour: number): string => {
 
 <template>
   <div class="w-full max-w-165 shrink-0">
-    <svg width="100%" viewBox="0 0 660 296" aria-label="今日の時間帯別タイプ数チャート">
+    <svg
+      width="100%"
+      viewBox="0 0 660 330"
+      aria-label="今日の時間帯別タイプ数チャート"
+      @mousemove="onSvgMouseMove"
+      @mouseleave="onSvgMouseLeave"
+    >
       <!-- Y-axis labels (left) -->
       <text
         v-for="label in Y_AXIS_LABELS"
@@ -137,6 +199,17 @@ const labelClass = (hour: number): string => {
       >
         {{ label.toLocaleString('en-US') }}
       </text>
+
+      <!-- Column highlight on hover -->
+      <rect
+        v-if="hoveredHour !== null"
+        :x="dotX(hoveredHour) - COL_W / 2"
+        :y="CHART_TOP - DOT_R"
+        :width="COL_W"
+        :height="CHART_BOTTOM - CHART_TOP + DOT_R * 2"
+        :rx="COL_W / 2"
+        style="fill: var(--background-color)"
+      />
 
       <!-- Dot grid: 24 columns (hours) × 10 rows (levels) -->
       <template v-for="hour in HOURS" :key="`col-${hour}`">
@@ -162,6 +235,31 @@ const labelClass = (hour: number): string => {
       >
         {{ hour }}
       </text>
+      <!-- Tooltip -->
+      <g v-if="hoveredHour !== null">
+        <polygon
+          :points="`${tooltipX - 6},27 ${tooltipX + 6},27 ${tooltipX},34`"
+          style="fill: var(--base-color)"
+        />
+        <rect
+          :x="tooltipX - tooltipWidth / 2"
+          y="5"
+          :width="tooltipWidth"
+          height="22"
+          rx="11"
+          style="fill: var(--base-color)"
+        />
+        <text
+          ref="tooltipTextEl"
+          :x="tooltipX"
+          y="20"
+          class="text-xs"
+          style="fill: var(--pond-color)"
+          text-anchor="middle"
+        >
+          {{ tooltipText }}
+        </text>
+      </g>
     </svg>
   </div>
 </template>

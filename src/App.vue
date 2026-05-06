@@ -83,10 +83,10 @@ const DAILY_GOAL = 10000;
             >{{ char }}</span
           >
         </p>
-        <p v-else class="text-base opacity-40 mb-8">Loading</p>
+        <p v-else class="text-base opacity-40">Loading</p>
 
         <!-- Day stamps chart -->
-        <DayStamps />
+        <DayStamps class="-mt-8" />
       </main>
     </template>
   </div>

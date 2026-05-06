@@ -13,23 +13,31 @@ const hourlyData = ref<number[]>(Array(24).fill(0));
 const todayDate = ref(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD
 
 const loadTodayHourlyData = async () => {
-  hourlyData.value = await fetchHourlyCounts(todayDate.value);
+  try {
+    hourlyData.value = await fetchHourlyCounts(todayDate.value);
+  } catch (err) {
+    console.error('[DayStamps] fetchHourlyCounts failed:', err);
+  }
 };
 
 let unlisten: (() => void) | null = null;
 
 onMounted(async () => {
   await loadTodayHourlyData();
-  unlisten = await subscribeKeystrokeUpdate(() => {
-    const now = new Date();
-    const newDate = now.toLocaleDateString('en-CA');
-    currentHour.value = now.getHours();
-    if (newDate !== todayDate.value) {
-      todayDate.value = newDate;
-      hourlyData.value = Array(24).fill(0);
-    }
-    loadTodayHourlyData();
-  });
+  try {
+    unlisten = await subscribeKeystrokeUpdate(() => {
+      const now = new Date();
+      const newDate = now.toLocaleDateString('en-CA');
+      currentHour.value = now.getHours();
+      if (newDate !== todayDate.value) {
+        todayDate.value = newDate;
+        hourlyData.value = Array(24).fill(0);
+      }
+      loadTodayHourlyData();
+    });
+  } catch (err) {
+    console.error('[DayStamps] subscribeKeystrokeUpdate failed:', err);
+  }
 });
 
 onUnmounted(() => {

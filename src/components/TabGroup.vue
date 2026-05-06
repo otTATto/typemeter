@@ -11,7 +11,7 @@ import NavButton from '@/components/NavButton.vue';
       <CalendarDays :size="18" />
       <span class="translate-y-0.75">DAY</span>
     </NavButton>
-    <NavButton role="tab" aria-selected="false">
+    <NavButton :locked="true" role="tab" aria-selected="false">
       <CalendarRange :size="18" />
       <span class="translate-y-0.75">DAYS</span>
     </NavButton>

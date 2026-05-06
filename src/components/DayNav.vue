@@ -23,7 +23,9 @@ const addDays = (date: string, days: number): string => {
 };
 
 const goPrev = () => emit('update:modelValue', addDays(props.modelValue, -1));
-const goToday = () => emit('update:modelValue', props.todayDate);
+const goToday = () => {
+  if (!isToday.value) emit('update:modelValue', props.todayDate);
+};
 const goNext = () => {
   if (!isToday.value) emit('update:modelValue', addDays(props.modelValue, 1));
 };
@@ -34,8 +36,10 @@ const goNext = () => {
     <NavButton aria-label="前の日" @click="goPrev">
       <ChevronLeft :size="20" />
     </NavButton>
-    <NavButton @click="goToday"><span class="translate-y-0.75">TODAY</span></NavButton>
-    <NavButton :disabled="isToday" aria-label="次の日" @click="goNext">
+    <NavButton :locked="isToday" @click="goToday"
+      ><span class="translate-y-0.75">TODAY</span></NavButton
+    >
+    <NavButton :locked="isToday" aria-label="次の日" @click="goNext">
       <ChevronRight :size="20" />
     </NavButton>
   </div>

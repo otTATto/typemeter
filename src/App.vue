@@ -26,22 +26,38 @@ onUnmounted(() => {
 <template>
   <main class="container">
     <template v-if="listenerError">
-      <p class="error-label">キーボード監視を開始できませんでした</p>
+      <p class="error-label">Can not start to capture keystrokes.</p>
       <p class="error-detail">{{ listenerError }}</p>
     </template>
     <template v-else-if="todayTotal !== null">
-      <p class="label">今日</p>
+      <p class="label">TODAY</p>
       <p class="count">{{ todayTotal.toLocaleString() }}</p>
     </template>
     <template v-else>
-      <p class="loading">読み込み中</p>
+      <p class="loading">Loading</p>
     </template>
   </main>
 </template>
 
 <style>
+@font-face {
+  font-family: Manjari;
+  src: url('/fonts/Manjari/Manjari-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Manjari;
+  src: url('/fonts/Manjari/Manjari-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Manjari, sans-serif;
   font-synthesis: none;
   text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;

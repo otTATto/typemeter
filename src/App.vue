@@ -112,6 +112,10 @@ const DAILY_GOAL = 10000;
             </div>
 
             <!-- Keystroke count -->
+            <!--
+              外側の span がスロット（幅・高さ固定 + overflow-hidden）。
+              内側の span は :key="char" で値が変わると enter/leave アニメーションする。
+            -->
             <p
               v-if="displayTotal !== null"
               class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
@@ -120,8 +124,14 @@ const DAILY_GOAL = 10000;
                 v-for="(char, i) in displayTotal.toLocaleString('en-US').split('')"
                 :key="i"
                 :class="char === ',' ? 'count-sep' : 'count-digit'"
-                >{{ char }}</span
+                class="relative h-[1em]"
               >
+                <Transition name="digit-roll">
+                  <span :key="char" class="absolute inset-0 flex items-center justify-center">{{
+                    char
+                  }}</span>
+                </Transition>
+              </span>
             </p>
             <p v-else class="flex items-center justify-center h-20 mb-8 text-base opacity-40">
               Loading
@@ -224,5 +234,26 @@ const DAILY_GOAL = 10000;
   transform: translateX(-100%);
   opacity: 0;
   filter: blur(25px);
+}
+
+/* 桁アニメーション: 旧桁が下へ退場、新桁が上から登場 */
+.digit-roll-enter-active,
+.digit-roll-leave-active {
+  transition:
+    transform 0.2s ease,
+    opacity 0.1s ease,
+    filter 0.3s ease;
+}
+
+.digit-roll-enter-from {
+  transform: translateY(-100%);
+  opacity: 0;
+  filter: blur(6px);
+}
+
+.digit-roll-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+  filter: blur(6px);
 }
 </style>

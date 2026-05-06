@@ -69,6 +69,45 @@ pub fn flush_minute_count(
     }
 }
 
+/// ある日付の1時間ごとのキーストローク数を SQLite から取得する
+///
+/// # Parameters
+/// * `db_path` - データベースファイルのパス
+/// * `date` - 対象日付（`YYYY-MM-DD` 形式）
+///
+/// # Returns
+/// インデックス = 時（0〜23）、値 = その時間帯の合計キーストローク数の配列。
+/// DB 接続・クエリ失敗時はすべて `0`。
+///
+/// # Behavior
+/// `recorded_at` は `chrono::Local::now().to_rfc3339()` 形式（`YYYY-MM-DDTHH:MM:SS+TZ`）で保存される。
+/// `strftime('%H', ...)` は UTC 変換してしまうため、位置 12〜13 文字目（ローカル時）を `substr` で直接抽出する。
+pub fn query_hourly_counts(db_path: &str, date: &str) -> [u64; 24] {
+    let mut counts = [0u64; 24];
+    let Ok(conn) = Connection::open(db_path) else {
+        return counts;
+    };
+    let Ok(mut stmt) = conn.prepare(
+        "SELECT CAST(substr(recorded_at, 12, 2) AS INTEGER), SUM(minute_count)
+         FROM keystroke_logs
+         WHERE recorded_at LIKE ?1
+         GROUP BY substr(recorded_at, 12, 2)",
+    ) else {
+        return counts;
+    };
+    let rows = stmt.query_map(params![format!("{}%", date)], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+    });
+    if let Ok(rows) = rows {
+        for (hour, total) in rows.flatten() {
+            if (0..24).contains(&hour) {
+                counts[hour as usize] = total.max(0) as u64;
+            }
+        }
+    }
+    counts
+}
+
 /// 今日の日付で保存された `keystroke_logs` の合計を SQLite から取得する
 ///
 /// # Returns

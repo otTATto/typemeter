@@ -2,16 +2,30 @@
 <!-- x 軸 = 時間帯（0〜23時）、y 軸 = カウントレベル（1000 刻み） -->
 <!-- App.vue メインカードから <DayStamps /> として呼ばれる -->
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue';
+import { fetchHourlyCounts, subscribeKeystrokeUpdate } from '@/lib/keystroke';
+
 const currentHour = new Date().getHours();
 
-/**
- * 時間帯別タイプ数のモックデータ（バックエンド実装後に差し替え予定）
- * インデックス = 時（0〜23）、値 = その時間帯のタイプ数
- */
-const MOCK_HOURLY_DATA: number[] = [
-  0, 0, 0, 200, 800, 2100, 4500, 6800, 8200, 7600, 5500, 3200, 2800, 4100, 6200, 8900, 7400, 5100,
-  3600, 2200, 1100, 500, 100, 0,
-];
+const hourlyData = ref<number[]>(Array(24).fill(0));
+
+// 今日の日付のみリアルタイム更新する（他の日付は onMounted の一度取得のみ）
+const todayDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+
+const loadTodayHourlyData = async () => {
+  hourlyData.value = await fetchHourlyCounts(todayDate);
+};
+
+let unlisten: (() => void) | null = null;
+
+onMounted(async () => {
+  await loadTodayHourlyData();
+  unlisten = await subscribeKeystrokeUpdate(() => loadTodayHourlyData());
+});
+
+onUnmounted(() => {
+  unlisten?.();
+});
 
 /**
  * - LEVELS              : Y 軸のカウントレベル（1000 刻み）
@@ -112,9 +126,7 @@ const labelClass = (hour: number): string => {
           :cx="dotX(hour)"
           :cy="dotY(level)"
           :r="DOT_R"
-          :class="
-            MOCK_HOURLY_DATA[hour] >= level ? 'fill-accent-color' : 'fill-sub-color opacity-35'
-          "
+          :class="hourlyData[hour] >= level ? 'fill-accent-color' : 'fill-sub-color opacity-35'"
         />
       </template>
 

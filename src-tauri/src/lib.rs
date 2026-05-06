@@ -8,7 +8,19 @@ use std::time::Duration;
 use chrono::Local;
 use tauri::{Emitter, Manager};
 
-use db::{flush_minute_count, init_db, query_today_db_count, DbPath};
+use db::{flush_minute_count, init_db, query_hourly_counts, query_today_db_count, DbPath};
+
+/// 指定日の1時間ごとのキーストローク数を返す Tauri コマンド
+///
+/// # Parameters
+/// * `date` - 対象日付（`YYYY-MM-DD` 形式）
+///
+/// # Returns
+/// 長さ 24 の Vec。インデックス = 時（0〜23）、値 = その時間帯の合計キーストローク数。
+#[tauri::command]
+fn get_hourly_counts(date: String, db_path: tauri::State<DbPath>) -> Vec<u64> {
+    query_hourly_counts(&db_path.0, &date).to_vec()
+}
 
 fn resolve_db_path(app: &tauri::App) -> String {
     if let Some(path) = std::env::var("TYPEMETER_DB_PATH")
@@ -79,7 +91,7 @@ pub fn run() {
                 Ok(())
             }
         })
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![get_hourly_counts])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 

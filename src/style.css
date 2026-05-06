@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+/* Primitive colors */
+@theme {
+  --color-tm-white: oklch(99.7% 0.003 85deg);
+  --color-tm-ivory: oklch(98% 0.005 80deg);
+  --color-tm-gray: oklch(85% 0.01 80deg);
+  --color-tm-black: oklch(45% 0.01 80deg);
+  --color-tm-dark-black: oklch(35% 0.01 80deg);
+  --color-tm-green: oklch(80% 0.05 170deg);
+}
+
+/* Semantic colors — inline で CSS 変数参照をそのまま使い、ダークモードの切り替えに対応する */
+@theme inline {
+  --color-pond-color: var(--pond-color);
+  --color-background-color: var(--background-color);
+  --color-sub-color: var(--sub-color);
+  --color-base-color: var(--base-color);
+  --color-accent-color: var(--accent-color);
+}
+
+/* Light mode */
+:root {
+  --pond-color: var(--color-tm-white);
+  --background-color: var(--color-tm-ivory);
+  --sub-color: var(--color-tm-gray);
+  --base-color: var(--color-tm-black);
+  --accent-color: var(--color-tm-green);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pond-color: var(--color-tm-black);
+    --background-color: var(--color-tm-dark-black);
+    --sub-color: var(--color-tm-gray);
+    --base-color: var(--color-tm-ivory);
+    --accent-color: var(--color-tm-green);
+  }
+}

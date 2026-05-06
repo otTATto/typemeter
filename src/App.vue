@@ -47,10 +47,10 @@ const DAILY_GOAL = 10000;
 
     <template v-else>
       <!-- Header -->
-      <header class="flex items-center justify-between px-6 h-22 shrink-0">
-        <TabGroup />
+      <header class="flex items-center px-6 h-22 shrink-0">
+        <div class="flex-1"><TabGroup /></div>
         <DayNav />
-        <ThemeToggle />
+        <div class="flex-1 flex justify-end"><ThemeToggle /></div>
       </header>
 
       <!-- Main content card -->

@@ -31,7 +31,7 @@ onUnmounted(() => {
     </template>
     <template v-else-if="todayTotal !== null">
       <p class="label">TODAY</p>
-      <p class="count">{{ todayTotal.toLocaleString() }}</p>
+      <p class="count">{{ todayTotal.toLocaleString('en-US') }}</p>
     </template>
     <template v-else>
       <p class="loading">Loading</p>

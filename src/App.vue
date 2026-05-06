@@ -115,7 +115,9 @@ const DAILY_GOAL = 10000;
             >{{ char }}</span
           >
         </p>
-        <p v-else class="text-base opacity-40">Loading</p>
+        <p v-else class="flex items-center justify-center h-[5rem] mb-8 text-base opacity-40">
+          Loading
+        </p>
 
         <!-- Day stamps chart -->
         <DayStamps :date="targetDate" class="-mt-8" />

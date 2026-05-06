@@ -55,7 +55,7 @@ const DOT_R = 8;
 const CHART_LEFT = 60;
 const CHART_RIGHT = 600;
 const CHART_TOP = 46; // ツールチップ領域（22px）+ 三角形（7px）+ 余白（17px）
-const CHART_BOTTOM = 296; // CHART_TOP 増分（+10）を加算
+const CHART_BOTTOM = 296; // CHART_TOP + 縦スパン 250px（CHART_BOTTOM - CHART_TOP を一定に保つ）
 const LABEL_GAP = 10;
 const VIEWBOX_WIDTH = 660;
 

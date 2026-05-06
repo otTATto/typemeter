@@ -12,8 +12,8 @@
     "prepare": "husky",
     "lint": "eslint src/",
     "lint:style": "stylelint \"src/**/*.{vue,css}\"",
-    "format": "oxfmt --write src/",
-    "format:check": "oxfmt --check src/"
+    "format": "oxfmt --write --ignore-path=.oxfmtignore src/",
+    "format:check": "oxfmt --check --ignore-path=.oxfmtignore src/"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",
@@ -57,7 +57,7 @@
       "oxfmt --write"
     ],
     "*.{json,md}": [
-      "oxfmt --write"
+      "oxfmt --write --ignore-path=.oxfmtignore"
     ]
   }
 }

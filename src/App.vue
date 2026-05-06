@@ -87,7 +87,7 @@ const DAILY_GOAL = 10000;
 
       <!-- Main content card -->
       <main
-        class="flex-1 flex flex-col items-center bg-pond-color rounded-t-[35px] pt-10 px-6 pb-6 overflow-hidden"
+        class="flex-1 flex flex-col items-center bg-pond-color rounded-t-[35px] pt-10 px-6 pb-6 overflow-y-auto"
       >
         <!-- Date -->
         <p class="flex items-center gap-1 text-xl mb-4">
@@ -150,5 +150,13 @@ const DAILY_GOAL = 10000;
   width: 0.25em;
   margin-inline: -0.05em;
   text-align: center;
+}
+
+main {
+  scrollbar-width: none;
+}
+
+main::-webkit-scrollbar {
+  display: none;
 }
 </style>

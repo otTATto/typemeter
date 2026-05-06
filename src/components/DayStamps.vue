@@ -59,7 +59,7 @@ const dotOpacity = (dayIdx: number, level: number) => {
 </script>
 
 <template>
-  <div class="stamps-wrap">
+  <div class="w-full max-w-165 shrink-0">
     <svg width="100%" viewBox="0 0 660 290" aria-label="過去の入力数チャート">
       <!-- Y-axis labels (left) -->
       <text
@@ -67,7 +67,7 @@ const dotOpacity = (dayIdx: number, level: number) => {
         :key="`yl-${label}`"
         :x="CHART_LEFT - 6"
         :y="dotY(label) + 4"
-        class="chart-label"
+        class="text-xs fill-sub-color"
         text-anchor="end"
       >
         {{ label.toLocaleString('en-US') }}
@@ -79,7 +79,7 @@ const dotOpacity = (dayIdx: number, level: number) => {
         :key="`yr-${label}`"
         :x="CHART_RIGHT + 6"
         :y="dotY(label) + 4"
-        class="chart-label"
+        class="text-xs fill-sub-color"
         text-anchor="start"
       >
         {{ label.toLocaleString('en-US') }}
@@ -105,8 +105,8 @@ const dotOpacity = (dayIdx: number, level: number) => {
           :key="label"
           :x="dotX(label)"
           y="0"
-          class="chart-label"
-          :class="{ 'chart-label-accent': label === TODAY_INDEX }"
+          class="text-xs fill-sub-color"
+          :class="{ 'fill-accent-color! font-bold': label === TODAY_INDEX }"
           text-anchor="middle"
         >
           {{ label }}
@@ -115,22 +115,3 @@ const dotOpacity = (dayIdx: number, level: number) => {
     </svg>
   </div>
 </template>
-
-<style scoped>
-.stamps-wrap {
-  width: 100%;
-  max-width: 660px;
-  flex-shrink: 0;
-}
-
-.chart-label {
-  font-family: Manjari, Inter, sans-serif;
-  font-size: 12px;
-  fill: var(--sub-color);
-}
-
-.chart-label-accent {
-  fill: var(--accent-color);
-  font-weight: 700;
-}
-</style>

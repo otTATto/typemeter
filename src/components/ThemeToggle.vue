@@ -6,46 +6,16 @@ import { Sun } from 'lucide-vue-next';
 </script>
 
 <template>
-  <button class="theme-toggle" aria-label="テーマ切り替え">
-    <span class="toggle-track">
-      <span class="toggle-thumb">
+  <button
+    class="flex items-center justify-center w-13.5 h-11 border-0 bg-transparent cursor-pointer p-0"
+    aria-label="テーマ切り替え"
+  >
+    <span class="flex items-center w-13.5 h-7 bg-sub-color rounded-[14px] p-0.5">
+      <span
+        class="flex items-center justify-center size-6 bg-pond-color rounded-full text-base-color"
+      >
         <Sun :size="12" />
       </span>
     </span>
   </button>
 </template>
-
-<style scoped>
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 44px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.toggle-track {
-  display: flex;
-  align-items: center;
-  width: 54px;
-  height: 28px;
-  background-color: var(--sub-color);
-  border-radius: 14px;
-  padding: 2px;
-}
-
-.toggle-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background-color: var(--pond-color);
-  border-radius: 50%;
-  color: var(--base-color);
-}
-</style>

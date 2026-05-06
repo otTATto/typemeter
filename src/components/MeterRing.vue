@@ -34,25 +34,21 @@ const arc = computed(() => {
 
 <template>
   <svg :width="CX * 2" :height="CY * 2" :viewBox="`0 0 ${CX * 2} ${CY * 2}`" aria-hidden="true">
-    <circle :cx="CX" :cy="CY" :r="R" fill="none" class="meter-track" :stroke-width="STROKE_WIDTH" />
+    <circle
+      :cx="CX"
+      :cy="CY"
+      :r="R"
+      fill="none"
+      class="stroke-sub-color opacity-35"
+      :stroke-width="STROKE_WIDTH"
+    />
     <path
       v-if="arc"
       :d="arc"
       fill="none"
-      class="meter-progress"
+      class="stroke-accent-color"
       :stroke-width="STROKE_WIDTH"
       stroke-linecap="round"
     />
   </svg>
 </template>
-
-<style scoped>
-.meter-track {
-  stroke: var(--sub-color);
-  opacity: 0.35;
-}
-
-.meter-progress {
-  stroke: var(--accent-color);
-}
-</style>

@@ -36,41 +36,46 @@ const DAILY_GOAL = 10000;
 </script>
 
 <template>
-  <div class="app-root">
+  <div class="flex flex-col h-screen bg-background-color">
     <!-- Error overlay -->
     <template v-if="listenerError">
-      <div class="error-container">
-        <p class="error-label">Failed to start capturing keystrokes.</p>
-        <p class="error-detail">{{ listenerError }}</p>
+      <div class="flex flex-col items-center justify-center h-screen gap-2">
+        <p class="text-base text-[#e53e3e] m-0">Failed to start capturing keystrokes.</p>
+        <p class="text-xs opacity-60 m-0 font-mono">{{ listenerError }}</p>
       </div>
     </template>
 
     <template v-else>
       <!-- Header -->
-      <header class="nav">
+      <header class="flex items-center justify-between px-6 h-22 shrink-0">
         <TabGroup />
         <DayNav />
         <ThemeToggle />
       </header>
 
       <!-- Main content card -->
-      <main class="card">
+      <main
+        class="flex-1 flex flex-col items-center bg-pond-color rounded-t-[35px] pt-10 px-6 pb-6 overflow-hidden"
+      >
         <!-- Date -->
-        <p class="date">
-          <span class="date-part">{{ dateYear }}</span>
-          <span class="date-sep">/</span>
-          <span class="date-part">{{ dateMonth }}</span>
-          <span class="date-sep">/</span>
-          <span class="date-part">{{ dateDay }}</span>
+        <p class="flex items-center gap-1 text-xl mb-8">
+          <span class="text-base-color">{{ dateYear }}</span>
+          <span class="text-sub-color">/</span>
+          <span class="text-base-color">{{ dateMonth }}</span>
+          <span class="text-sub-color">/</span>
+          <span class="text-base-color">{{ dateDay }}</span>
         </p>
 
         <!-- Circular meter -->
-        <div class="meter-wrap">
+        <div class="mb-6">
           <MeterRing :value="todayTotal ?? 0" :goal="DAILY_GOAL" />
         </div>
 
         <!-- Keystroke count -->
-        <p v-if="todayTotal !== null" class="count">
+        <p
+          v-if="todayTotal !== null"
+          class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
+        >
           <span
             v-for="(char, i) in todayTotal.toLocaleString('en-US').split('')"
             :key="i"
@@ -78,7 +83,7 @@ const DAILY_GOAL = 10000;
             >{{ char }}</span
           >
         </p>
-        <p v-else class="loading">Loading</p>
+        <p v-else class="text-base opacity-40 mb-8">Loading</p>
 
         <!-- Day stamps chart -->
         <DayStamps :today-total="todayTotal ?? 0" />
@@ -88,67 +93,6 @@ const DAILY_GOAL = 10000;
 </template>
 
 <style scoped>
-.app-root {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: var(--background-color);
-}
-
-/* ── Header ── */
-.nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  height: 88px;
-  flex-shrink: 0;
-}
-
-/* ── Card ── */
-.card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background-color: var(--pond-color);
-  border-radius: 35px 35px 0 0;
-  padding: 40px 24px 24px;
-  overflow: hidden;
-}
-
-/* ── Date ── */
-.date {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 1.25rem;
-  margin: 0 0 32px;
-}
-
-.date-part {
-  color: var(--base-color);
-}
-
-.date-sep {
-  color: var(--sub-color);
-}
-
-/* ── Meter ── */
-.meter-wrap {
-  margin-bottom: 24px;
-}
-
-/* ── Count ── */
-.count {
-  display: flex;
-  justify-content: center;
-  font-size: 5rem;
-  font-weight: 700;
-  margin: 0 0 32px;
-  line-height: 1;
-}
-
 /*
  * Manjari は tnum OpenType フィーチャーを持たないため font-variant-numeric: tabular-nums が効かない。
  * 代わりに各桁を固定幅の span で囲み、数値更新時の横揺れを防ぐ。
@@ -174,35 +118,5 @@ const DAILY_GOAL = 10000;
   width: 0.25em;
   margin-inline: -0.05em;
   text-align: center;
-}
-
-/* ── Error ── */
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  gap: 8px;
-}
-
-.error-label {
-  font-size: 1rem;
-  color: #e53e3e;
-  margin: 0;
-}
-
-.error-detail {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  margin: 0;
-  font-family: monospace;
-}
-
-/* ── Loading ── */
-.loading {
-  font-size: 1rem;
-  opacity: 0.4;
-  margin: 0 0 32px;
 }
 </style>

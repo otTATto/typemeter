@@ -57,7 +57,7 @@ onUnmounted(() => {
 }
 
 :root {
-  font-family: Manjari, sans-serif;
+  font-family: Manjari, Inter, Avenir, Helvetica, Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;

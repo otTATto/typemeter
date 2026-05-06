@@ -90,7 +90,7 @@ const dotFill = (hour: number, level: number): string => {
   const prevLevel = level - 1000;
   if (count <= prevLevel) return 'var(--background-color)';
   const pct = Math.round(((count - prevLevel) / 1000) * 100);
-  return `color-mix(in oklch, var(--accent-color) ${pct}%, white)`;
+  return `color-mix(in oklch, var(--accent-color) ${pct}%, var(--pond-color))`;
 };
 
 /**

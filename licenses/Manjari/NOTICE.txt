@@ -1,0 +1,14 @@
+Manjari Latin Subset
+
+This application includes a subsetted version of the Manjari font.
+
+Original font:
+Manjari, by The Manjari Project Authors / Santhosh Thottingal.
+
+Modification:
+The bundled font files have been subsetted to include only Latin characters,
+digits, and basic punctuation, and converted to WOFF2 for application bundling.
+
+License:
+SIL Open Font License, Version 1.1.
+See OFL.txt.

@@ -1,13 +1,24 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import DayNav from '@/components/DayNav.vue';
 import DayStamps from '@/components/DayStamps.vue';
 import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
-import { subscribeKeystrokeUpdate, subscribeListenerError } from '@/lib/keystroke';
+import {
+  fetchHourlyCounts,
+  subscribeKeystrokeUpdate,
+  subscribeListenerError,
+} from '@/lib/keystroke';
+
+const todayDate = ref(new Date().toLocaleDateString('en-CA'));
+const targetDate = ref(todayDate.value);
+const isToday = computed(() => targetDate.value === todayDate.value);
 
 const todayTotal = ref<number | null>(null);
+const pastTotal = ref<number | null>(null);
+const displayTotal = computed(() => (isToday.value ? todayTotal.value : pastTotal.value));
+
 const listenerError = ref<string | null>(null);
 
 const unlisteners: Array<() => void> = [];
@@ -16,6 +27,13 @@ onMounted(async () => {
   unlisteners.push(
     await subscribeKeystrokeUpdate((total) => {
       todayTotal.value = total;
+      const newTodayDate = new Date().toLocaleDateString('en-CA');
+      if (newTodayDate !== todayDate.value) {
+        if (targetDate.value === todayDate.value) {
+          targetDate.value = newTodayDate;
+        }
+        todayDate.value = newTodayDate;
+      }
     }),
     await subscribeListenerError((message) => {
       listenerError.value = message;
@@ -27,10 +45,24 @@ onUnmounted(() => {
   unlisteners.forEach((fn) => fn());
 });
 
-const now = new Date();
-const dateYear = now.getFullYear();
-const dateMonth = String(now.getMonth() + 1).padStart(2, '0');
-const dateDay = String(now.getDate()).padStart(2, '0');
+watch(targetDate, async (newDate) => {
+  if (newDate === todayDate.value) {
+    pastTotal.value = null;
+    return;
+  }
+  try {
+    const counts = await fetchHourlyCounts(newDate);
+    pastTotal.value = counts.reduce((a, b) => a + b, 0);
+  } catch (err) {
+    console.error('[App] fetchHourlyCounts failed:', err);
+    pastTotal.value = null;
+  }
+});
+
+const targetDateParts = computed(() => {
+  const [year, month, day] = targetDate.value.split('-');
+  return { year, month, day };
+});
 
 const DAILY_GOAL = 10000;
 </script>
@@ -49,7 +81,7 @@ const DAILY_GOAL = 10000;
       <!-- Header -->
       <header class="flex items-center px-6 h-22 shrink-0">
         <div class="flex-1"><TabGroup /></div>
-        <DayNav />
+        <DayNav v-model="targetDate" :today-date="todayDate" />
         <div class="flex-1 flex justify-end"><ThemeToggle /></div>
       </header>
 
@@ -59,25 +91,25 @@ const DAILY_GOAL = 10000;
       >
         <!-- Date -->
         <p class="flex items-center gap-1 text-xl mb-4">
-          <span class="text-base-color">{{ dateYear }}</span>
+          <span class="text-base-color">{{ targetDateParts.year }}</span>
           <span class="text-sub-color">/</span>
-          <span class="text-base-color">{{ dateMonth }}</span>
+          <span class="text-base-color">{{ targetDateParts.month }}</span>
           <span class="text-sub-color">/</span>
-          <span class="text-base-color">{{ dateDay }}</span>
+          <span class="text-base-color">{{ targetDateParts.day }}</span>
         </p>
 
         <!-- Circular meter -->
         <div class="-mb-5">
-          <MeterRing :value="todayTotal ?? 0" :goal="DAILY_GOAL" />
+          <MeterRing :value="displayTotal ?? 0" :goal="DAILY_GOAL" />
         </div>
 
         <!-- Keystroke count -->
         <p
-          v-if="todayTotal !== null"
+          v-if="displayTotal !== null"
           class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
         >
           <span
-            v-for="(char, i) in todayTotal.toLocaleString('en-US').split('')"
+            v-for="(char, i) in displayTotal.toLocaleString('en-US').split('')"
             :key="i"
             :class="char === ',' ? 'count-sep' : 'count-digit'"
             >{{ char }}</span
@@ -86,7 +118,7 @@ const DAILY_GOAL = 10000;
         <p v-else class="text-base opacity-40">Loading</p>
 
         <!-- Day stamps chart -->
-        <DayStamps class="-mt-8" />
+        <DayStamps :date="targetDate" class="-mt-8" />
       </main>
     </template>
   </div>

@@ -1,20 +1,25 @@
-<!-- 今日の時間帯別タイプ数をドットグリッドで可視化するスタンプチャート -->
+<!-- 指定日の時間帯別タイプ数をドットグリッドで可視化するスタンプチャート -->
 <!-- x 軸 = 時間帯（0〜23時）、y 軸 = カウントレベル（1000 刻み） -->
-<!-- App.vue メインカードから <DayStamps /> として呼ばれる -->
+<!-- App.vue メインカードから <DayStamps :date="targetDate" /> として呼ばれる -->
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { fetchHourlyCounts, subscribeKeystrokeUpdate } from '@/lib/keystroke';
 
+const props = defineProps<{
+  date: string; // YYYY-MM-DD
+}>();
+
 const currentHour = ref(new Date().getHours());
+
+// 今日の日付を追跡（日またぎ検知に使用）
+const todayDate = ref(new Date().toLocaleDateString('en-CA'));
+const isToday = computed(() => props.date === todayDate.value);
 
 const hourlyData = ref<number[]>(Array(24).fill(0));
 
-// 今日の日付のみリアルタイム更新する（他の日付は onMounted の一度取得のみ）
-const todayDate = ref(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD
-
-const loadTodayHourlyData = async () => {
+const loadHourlyData = async (date: string) => {
   try {
-    hourlyData.value = await fetchHourlyCounts(todayDate.value);
+    hourlyData.value = await fetchHourlyCounts(date);
   } catch (err) {
     console.error('[DayStamps] fetchHourlyCounts failed:', err);
   }
@@ -22,27 +27,51 @@ const loadTodayHourlyData = async () => {
 
 let unlisten: (() => void) | null = null;
 
-onMounted(async () => {
-  await loadTodayHourlyData();
+const unsubscribe = () => {
+  unlisten?.();
+  unlisten = null;
+};
+
+const subscribeToday = async () => {
   try {
     unlisten = await subscribeKeystrokeUpdate(() => {
       const now = new Date();
-      const newDate = now.toLocaleDateString('en-CA');
+      const newTodayDate = now.toLocaleDateString('en-CA');
       currentHour.value = now.getHours();
-      if (newDate !== todayDate.value) {
-        todayDate.value = newDate;
-        hourlyData.value = Array(24).fill(0);
+      if (newTodayDate !== todayDate.value) {
+        todayDate.value = newTodayDate;
+        // 日またぎ: props.date が旧・今日になったため購読を停止
+        unsubscribe();
+        return;
       }
-      loadTodayHourlyData();
+      loadHourlyData(props.date);
     });
   } catch (err) {
     console.error('[DayStamps] subscribeKeystrokeUpdate failed:', err);
   }
+};
+
+onMounted(async () => {
+  await loadHourlyData(props.date);
+  if (isToday.value) {
+    await subscribeToday();
+  }
 });
 
-onUnmounted(() => {
-  unlisten?.();
-});
+// date prop の変化（ユーザーのナビゲーション）に対応
+watch(
+  () => props.date,
+  async (newDate) => {
+    unsubscribe();
+    hourlyData.value = Array(24).fill(0);
+    await loadHourlyData(newDate);
+    if (newDate === todayDate.value) {
+      await subscribeToday();
+    }
+  },
+);
+
+onUnmounted(unsubscribe);
 
 const hoveredHour = ref<number | null>(null);
 
@@ -178,7 +207,7 @@ const dotFill = (hour: number, level: number): string => {
  *   - それ以外: pond-color（実質不可視）
  */
 const labelClass = (hour: number): string => {
-  if (hour === currentHour.value) return 'fill-accent-color! font-bold';
+  if (isToday.value && hour === currentHour.value) return 'fill-accent-color! font-bold';
   if (ALWAYS_VISIBLE_HOURS.has(hour)) return 'fill-sub-color';
   return 'fill-pond-color';
 };

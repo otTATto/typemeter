@@ -39,40 +39,6 @@ onUnmounted(() => {
   </main>
 </template>
 
-<style>
-@font-face {
-  font-family: Manjari;
-  src: url('/fonts/Manjari/Manjari-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: Manjari;
-  src: url('/fonts/Manjari/Manjari-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-:root {
-  font-family: Manjari, Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizelegibility;
-  -webkit-font-smoothing: antialiased;
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-}
-</style>
-
 <style scoped>
 .container {
   display: flex;

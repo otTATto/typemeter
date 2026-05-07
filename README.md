@@ -1,16 +1,19 @@
-# TypeMeter
+# Typemeter
 
-TypeMeter is a local activity meter for your typing.
+Typemeter is a local activity meter for your typing, like a pedometer for your work at the keyboard.
+
+<img width="2059" height="986" alt="2026-05-07_18 02 50" src="https://github.com/user-attachments/assets/30bc40a4-bde0-48d5-ba2f-725182760510" />
+
 
 ## Data & Privacy
 
-TypeMeter records **only keystroke counts** — never the content of what you type.
+Typemeter records **only keystroke counts** — never the content of what you type.
 
 - No characters or key names are stored
 - All data stays on your device (local storage only)
 - No network requests are made
 
-## Tech stack
+## Tech Stack
 
 This is a desktop app built with [Tauri](https://tauri.app), a framework with a Rust-based backend and a Vue-based frontend.
 
@@ -22,7 +25,7 @@ This is a desktop app built with [Tauri](https://tauri.app), a framework with a 
 | Package manager | [Bun](https://bun.sh)                   |
 | Build tool      | [Vite](https://vite.dev)                |
 
-## How to start development
+## How to Develop
 
 ### Prerequisites
 
@@ -41,7 +44,7 @@ This is a desktop app built with [Tauri](https://tauri.app), a framework with a 
    bun run tauri dev
    ```
 
-### Using mock data
+### Using Mock Data
 
 To develop with pre-generated data instead of real keystroke logs:
 
@@ -54,7 +57,7 @@ To develop with pre-generated data instead of real keystroke logs:
    bun run tauri:mock
    ```
 
-## Build
+## How to Build
 
 ```sh
 bun run tauri build

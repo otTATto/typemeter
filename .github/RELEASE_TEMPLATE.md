@@ -6,11 +6,13 @@
 Typemeter is a local activity meter for your typing — like a pedometer, but for your keyboard.
 It counts your keystrokes without ever recording what you type, and all data stays on your device.
 
-## ✨ Features
+## ✨ New Features
 
-- Real-time keystroke counting and logging
-- Dashboard to review your daily keystroke history
-- Fully local — no network requests, no cloud sync
+-
+
+## 🐛 Bug Fixes
+
+-
 
 ## 📁 Downloads
 

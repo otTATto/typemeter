@@ -5,13 +5,14 @@ import DayStamps from '@/components/DayStamps.vue';
 import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import { formatDate } from '@/lib/date';
 import {
   fetchHourlyCounts,
   subscribeKeystrokeUpdate,
   subscribeListenerError,
 } from '@/lib/keystroke';
 
-const todayDate = ref(new Date().toLocaleDateString('en-CA'));
+const todayDate = ref(formatDate(new Date()));
 const targetDate = ref(todayDate.value);
 const isToday = computed(() => targetDate.value === todayDate.value);
 
@@ -27,7 +28,7 @@ onMounted(async () => {
   unlisteners.push(
     await subscribeKeystrokeUpdate((total) => {
       todayTotal.value = total;
-      const newTodayDate = new Date().toLocaleDateString('en-CA');
+      const newTodayDate = formatDate(new Date());
       if (newTodayDate !== todayDate.value) {
         const wasToday = targetDate.value === todayDate.value;
         todayDate.value = newTodayDate;

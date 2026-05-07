@@ -3,6 +3,7 @@
 <!-- App.vue メインカードから <DayStamps :date="targetDate" /> として呼ばれる -->
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { formatDate } from '@/lib/date';
 import { fetchHourlyCounts, subscribeKeystrokeUpdate } from '@/lib/keystroke';
 
 const props = defineProps<{
@@ -12,7 +13,7 @@ const props = defineProps<{
 const currentHour = ref(new Date().getHours());
 
 // 今日の日付を追跡（日またぎ検知に使用）
-const todayDate = ref(new Date().toLocaleDateString('en-CA'));
+const todayDate = ref(formatDate(new Date()));
 const isToday = computed(() => props.date === todayDate.value);
 
 const hourlyData = ref<number[]>(Array(24).fill(0));
@@ -36,7 +37,7 @@ const subscribeToday = async () => {
   try {
     unlisten = await subscribeKeystrokeUpdate(() => {
       const now = new Date();
-      const newTodayDate = now.toLocaleDateString('en-CA');
+      const newTodayDate = formatDate(now);
       currentHour.value = now.getHours();
       if (newTodayDate !== todayDate.value) {
         todayDate.value = newTodayDate;

@@ -4,6 +4,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavButton from '@/components/NavButton.vue';
+import { formatDate } from '@/lib/date';
 
 const props = defineProps<{
   modelValue: string; // ターゲット日付（YYYY-MM-DD）
@@ -19,7 +20,7 @@ const isToday = computed(() => props.modelValue === props.todayDate);
 const addDays = (date: string, days: number): string => {
   const d = new Date(`${date}T00:00:00`);
   d.setDate(d.getDate() + days);
-  return d.toLocaleDateString('en-CA');
+  return formatDate(d);
 };
 
 const goPrev = () => emit('update:modelValue', addDays(props.modelValue, -1));

@@ -70,6 +70,10 @@ const targetDateParts = computed(() => {
   return { year, month, day };
 });
 
+const displayChars = computed(() =>
+  displayTotal.value !== null ? displayTotal.value.toLocaleString('en-US').split('') : [],
+);
+
 const DAILY_GOAL = 10000;
 </script>
 
@@ -122,8 +126,8 @@ const DAILY_GOAL = 10000;
               class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
             >
               <span
-                v-for="(char, i) in displayTotal.toLocaleString('en-US').split('')"
-                :key="i"
+                v-for="(char, i) in displayChars"
+                :key="displayChars.length - i"
                 :class="char === ',' ? 'count-sep' : 'count-digit'"
                 class="relative h-[1em]"
               >

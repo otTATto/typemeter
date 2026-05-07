@@ -2,8 +2,7 @@
 
 Typemeter is a local activity meter for your typing, like a pedometer for your work at the keyboard.
 
-<img width="2059" height="986" alt="2026-05-07_18 02 50" src="https://github.com/user-attachments/assets/30bc40a4-bde0-48d5-ba2f-725182760510" />
-
+<img width="2059" height="986" alt="Typemeter dashboard screenshot" src="https://github.com/user-attachments/assets/30bc40a4-bde0-48d5-ba2f-725182760510" />
 
 ## Data & Privacy
 

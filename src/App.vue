@@ -29,10 +29,11 @@ onMounted(async () => {
       todayTotal.value = total;
       const newTodayDate = new Date().toLocaleDateString('en-CA');
       if (newTodayDate !== todayDate.value) {
-        if (targetDate.value === todayDate.value) {
+        const wasToday = targetDate.value === todayDate.value;
+        todayDate.value = newTodayDate;
+        if (wasToday) {
           targetDate.value = newTodayDate;
         }
-        todayDate.value = newTodayDate;
       }
     }),
     await subscribeListenerError((message) => {

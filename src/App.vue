@@ -51,9 +51,9 @@ const transitionDirection = ref<'left' | 'right'>('left');
 
 watch(targetDate, async (newDate, oldDate) => {
   transitionDirection.value = newDate < oldDate ? 'right' : 'left';
+  pastTotal.value = null;
 
   if (newDate === todayDate.value) {
-    pastTotal.value = null;
     return;
   }
   try {
@@ -61,7 +61,6 @@ watch(targetDate, async (newDate, oldDate) => {
     pastTotal.value = counts.reduce((a, b) => a + b, 0);
   } catch (err) {
     console.error('[App] fetchHourlyCounts failed:', err);
-    pastTotal.value = null;
   }
 });
 

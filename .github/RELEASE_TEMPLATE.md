@@ -16,13 +16,13 @@ It counts your keystrokes without ever recording what you type, and all data sta
 
 ## 📁 Downloads
 
-| OS                    | File                                                                             |
-| --------------------- | -------------------------------------------------------------------------------- |
-| Windows               | `typemeter_0.1.0-beta.1_x64_en-US.msi` or `typemeter_0.1.0-beta.1_x64-setup.exe` |
-| macOS (Apple Silicon) | `typemeter_0.1.0-beta.1_aarch64.dmg`                                             |
-| Linux (deb)           | `typemeter_0.1.0-beta.1_amd64.deb`                                               |
-| Linux (AppImage)      | `typemeter_0.1.0-beta.1_amd64.AppImage`                                          |
-| Linux (rpm)           | `typemeter-0.1.0-beta.1-1.x86_64.rpm`                                            |
+| OS                    | File                                                                       |
+| --------------------- | -------------------------------------------------------------------------- |
+| Windows               | `typemeter_{version}_x64_en-US.msi` or `typemeter_{version}_x64-setup.exe` |
+| macOS (Apple Silicon) | `typemeter_{version}_aarch64.dmg`                                          |
+| Linux (deb)           | `typemeter_{version}_amd64.deb`                                            |
+| Linux (AppImage)      | `typemeter_{version}_amd64.AppImage`                                       |
+| Linux (rpm)           | `typemeter-{version}-1.x86_64.rpm`                                         |
 
 > [!NOTE]
 > 🍎 **macOS users**:

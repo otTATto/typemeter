@@ -41,23 +41,5 @@
     "typescript-eslint": "^8.32.1",
     "vite": "^6.0.3",
     "vue-tsc": "^2.1.10"
-  },
-  "lint-staged": {
-    "*.vue": [
-      "eslint --fix",
-      "stylelint --fix",
-      "oxfmt --write"
-    ],
-    "*.ts": [
-      "eslint --fix",
-      "oxfmt --write"
-    ],
-    "*.css": [
-      "stylelint --fix",
-      "oxfmt --write"
-    ],
-    "*.{json,md}": [
-      "oxfmt --write --ignore-path=.oxfmtignore"
-    ]
   }
 }

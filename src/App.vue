@@ -1,13 +1,25 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import DayNav from '@/components/DayNav.vue';
 import DayStamps from '@/components/DayStamps.vue';
 import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
-import { subscribeKeystrokeUpdate, subscribeListenerError } from '@/lib/keystroke';
+import { formatDate } from '@/lib/date';
+import {
+  fetchHourlyCounts,
+  subscribeKeystrokeUpdate,
+  subscribeListenerError,
+} from '@/lib/keystroke';
+
+const todayDate = ref(formatDate(new Date()));
+const targetDate = ref(todayDate.value);
+const isToday = computed(() => targetDate.value === todayDate.value);
 
 const todayTotal = ref<number | null>(null);
+const pastTotal = ref<number | null>(null);
+const displayTotal = computed(() => (isToday.value ? todayTotal.value : pastTotal.value));
+
 const listenerError = ref<string | null>(null);
 
 const unlisteners: Array<() => void> = [];
@@ -16,6 +28,14 @@ onMounted(async () => {
   unlisteners.push(
     await subscribeKeystrokeUpdate((total) => {
       todayTotal.value = total;
+      const newTodayDate = formatDate(new Date());
+      if (newTodayDate !== todayDate.value) {
+        const wasToday = targetDate.value === todayDate.value;
+        todayDate.value = newTodayDate;
+        if (wasToday) {
+          targetDate.value = newTodayDate;
+        }
+      }
     }),
     await subscribeListenerError((message) => {
       listenerError.value = message;
@@ -27,10 +47,32 @@ onUnmounted(() => {
   unlisteners.forEach((fn) => fn());
 });
 
-const now = new Date();
-const dateYear = now.getFullYear();
-const dateMonth = String(now.getMonth() + 1).padStart(2, '0');
-const dateDay = String(now.getDate()).padStart(2, '0');
+// < は過去方向（右スライド）、> / TODAY は未来方向（左スライド）
+const transitionDirection = ref<'left' | 'right'>('left');
+
+watch(targetDate, async (newDate, oldDate) => {
+  transitionDirection.value = newDate < oldDate ? 'right' : 'left';
+  pastTotal.value = null;
+
+  if (newDate === todayDate.value) {
+    return;
+  }
+  try {
+    const counts = await fetchHourlyCounts(newDate);
+    pastTotal.value = counts.reduce((a, b) => a + b, 0);
+  } catch (err) {
+    console.error('[App] fetchHourlyCounts failed:', err);
+  }
+});
+
+const targetDateParts = computed(() => {
+  const [year, month, day] = targetDate.value.split('-');
+  return { year, month, day };
+});
+
+const displayChars = computed(() =>
+  displayTotal.value !== null ? displayTotal.value.toLocaleString('en-US').split('') : [],
+);
 
 const DAILY_GOAL = 10000;
 </script>
@@ -49,44 +91,61 @@ const DAILY_GOAL = 10000;
       <!-- Header -->
       <header class="flex items-center px-6 h-22 shrink-0">
         <div class="flex-1"><TabGroup /></div>
-        <DayNav />
+        <DayNav v-model="targetDate" :today-date="todayDate" />
         <div class="flex-1 flex justify-end"><ThemeToggle /></div>
       </header>
 
-      <!-- Main content card -->
-      <main
-        class="flex-1 flex flex-col items-center bg-pond-color rounded-t-[35px] pt-10 px-6 pb-6 overflow-hidden"
-      >
-        <!-- Date -->
-        <p class="flex items-center gap-1 text-xl mb-4">
-          <span class="text-base-color">{{ dateYear }}</span>
-          <span class="text-sub-color">/</span>
-          <span class="text-base-color">{{ dateMonth }}</span>
-          <span class="text-sub-color">/</span>
-          <span class="text-base-color">{{ dateDay }}</span>
-        </p>
-
-        <!-- Circular meter -->
-        <div class="-mb-5">
-          <MeterRing :value="todayTotal ?? 0" :goal="DAILY_GOAL" />
-        </div>
-
-        <!-- Keystroke count -->
-        <p
-          v-if="todayTotal !== null"
-          class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
-        >
-          <span
-            v-for="(char, i) in todayTotal.toLocaleString('en-US').split('')"
-            :key="i"
-            :class="char === ',' ? 'count-sep' : 'count-digit'"
-            >{{ char }}</span
+      <!-- Main content card（背景は固定、内部コンテンツのみスライド） -->
+      <main class="flex-1 relative overflow-hidden bg-pond-color rounded-t-[35px]">
+        <Transition :name="`slide-${transitionDirection}`">
+          <div
+            :key="targetDate"
+            class="content-area absolute inset-0 flex flex-col items-center pt-10 px-6 pb-6 overflow-y-auto"
           >
-        </p>
-        <p v-else class="text-base opacity-40">Loading</p>
+            <!-- Date -->
+            <p class="flex items-center gap-1 text-xl mb-4">
+              <span class="text-base-color">{{ targetDateParts.year }}</span>
+              <span class="text-sub-color">/</span>
+              <span class="text-base-color">{{ targetDateParts.month }}</span>
+              <span class="text-sub-color">/</span>
+              <span class="text-base-color">{{ targetDateParts.day }}</span>
+            </p>
 
-        <!-- Day stamps chart -->
-        <DayStamps class="-mt-8" />
+            <!-- Circular meter -->
+            <div class="-mb-5">
+              <MeterRing :value="displayTotal ?? 0" :goal="DAILY_GOAL" />
+            </div>
+
+            <!-- Keystroke count -->
+            <!--
+              外側の span がスロット（幅・高さ固定 + overflow-hidden）。
+              内側の span は :key="char" で値が変わると enter/leave アニメーションする。
+            -->
+            <p
+              v-if="displayTotal !== null"
+              class="flex justify-center text-[5rem] font-bold mb-8 leading-none"
+            >
+              <span
+                v-for="(char, i) in displayChars"
+                :key="displayChars.length - i"
+                :class="char === ',' ? 'count-sep' : 'count-digit'"
+                class="relative h-[1em]"
+              >
+                <Transition name="digit-roll">
+                  <span :key="char" class="absolute inset-0 flex items-center justify-center">{{
+                    char
+                  }}</span>
+                </Transition>
+              </span>
+            </p>
+            <p v-else class="flex items-center justify-center h-20 mb-8 text-base opacity-40">
+              Loading
+            </p>
+
+            <!-- Day stamps chart -->
+            <DayStamps :date="targetDate" class="-mt-8" />
+          </div>
+        </Transition>
       </main>
     </template>
   </div>
@@ -118,5 +177,88 @@ const DAILY_GOAL = 10000;
   width: 0.25em;
   margin-inline: -0.05em;
   text-align: center;
+}
+
+.content-area {
+  scrollbar-width: none;
+}
+
+.content-area::-webkit-scrollbar {
+  display: none;
+}
+
+/* < ボタン: 旧コンテンツが右へ退場、新コンテンツが左から登場 */
+.slide-right-enter-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.15s ease,
+    filter 0.3s ease;
+}
+
+.slide-right-leave-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.1s ease,
+    filter 0.3s ease;
+}
+
+.slide-right-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+  filter: blur(25px);
+}
+
+.slide-right-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+  filter: blur(25px);
+}
+
+/* > / TODAY ボタン: 旧コンテンツが左へ退場、新コンテンツが右から登場 */
+.slide-left-enter-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.15s ease,
+    filter 0.3s ease;
+}
+
+.slide-left-leave-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.1s ease,
+    filter 0.3s ease;
+}
+
+.slide-left-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+  filter: blur(25px);
+}
+
+.slide-left-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+  filter: blur(25px);
+}
+
+/* 桁アニメーション: 旧桁が下へ退場、新桁が上から登場 */
+.digit-roll-enter-active,
+.digit-roll-leave-active {
+  transition:
+    transform 0.2s ease,
+    opacity 0.1s ease,
+    filter 0.3s ease;
+}
+
+.digit-roll-enter-from {
+  transform: translateY(-100%);
+  opacity: 0;
+  filter: blur(6px);
+}
+
+.digit-roll-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+  filter: blur(6px);
 }
 </style>

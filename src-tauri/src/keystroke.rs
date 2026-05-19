@@ -152,13 +152,12 @@ fn start_listening_rdev(
     let app_handle_err = app_handle.clone();
     // rdev は OS のキーリピートをフィルタしないため、長押し中も KeyPress が繰り返し届く
     // HashSet で押下中のキーを管理し、KeyPress → KeyRelease のサイクルごとに 1 カウントとする
-    let pressed_keys: Arc<Mutex<std::collections::HashSet<rdev::Key>>> =
-        Arc::new(Mutex::new(std::collections::HashSet::new()));
+    let mut pressed_keys = std::collections::HashSet::new();
     thread::spawn(move || {
         if let Err(e) = rdev::listen(move |event| {
             match event.event_type {
                 rdev::EventType::KeyPress(key) => {
-                    if pressed_keys.lock().unwrap().insert(key) {
+                    if pressed_keys.insert(key) {
                         let count = {
                             let mut mc = minute_count.lock().unwrap();
                             *mc += 1;
@@ -169,7 +168,7 @@ fn start_listening_rdev(
                     }
                 }
                 rdev::EventType::KeyRelease(key) => {
-                    pressed_keys.lock().unwrap().remove(&key);
+                    pressed_keys.remove(&key);
                 }
                 _ => {}
             }

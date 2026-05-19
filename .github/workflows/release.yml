@@ -44,6 +44,18 @@ jobs:
         with:
           workspaces: src-tauri
 
+      - name: Read Release Notes
+        id: release_notes
+        shell: bash
+        run: |
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          body=$(cat "docs/releases/v${VERSION}.md")
+          {
+            echo "body<<EOF"
+            echo "$body"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and Publish Release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -51,5 +63,6 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: v__VERSION__
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: true

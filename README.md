@@ -63,3 +63,39 @@ bun run tauri build
 ```
 
 The installer is generated in `src-tauri/target/release/bundle/`.
+
+## How to Release
+
+### 1. Bump the version
+
+Update the following two fields in `src-tauri/tauri.conf.json`:
+
+| Field                        | Platform      | Example                                  |
+| ---------------------------- | ------------- | ---------------------------------------- |
+| `version`                    | macOS / Linux | `0.2.0`                                  |
+| `bundle.windows.wix.version` | Windows       | `0.2.0.0` (must follow `x.y.z.w` format) |
+
+### 2. Create the release note
+
+```sh
+bun run release:note v0.2.0
+```
+
+This generates `docs/releases/v0.2.0.md` from the template in `.github/RELEASE_TEMPLATE.md`.
+
+### 3. Edit the release note
+
+Fill in the **New Features** and **Bug Fixes** sections in `docs/releases/v0.2.0.md`.
+
+### 4. Commit and merge into the release branch
+
+```sh
+git add src-tauri/tauri.conf.json docs/releases/v0.2.0.md
+git commit -m "release: v0.2.0"
+```
+
+Merge (or push) the commit into the `release` branch. GitHub Actions will then build the app for all platforms and create a **draft** GitHub Release using the release note as the body.
+
+### 5. Publish the release
+
+Once all builds succeed, open the draft release on GitHub, verify the attached assets, and publish it.

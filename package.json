@@ -13,7 +13,8 @@
     "lint": "eslint src/",
     "lint:style": "stylelint \"src/**/*.{vue,css}\"",
     "format": "oxfmt --write --ignore-path=.oxfmtignore src/",
-    "format:check": "oxfmt --check --ignore-path=.oxfmtignore src/"
+    "format:check": "oxfmt --check --ignore-path=.oxfmtignore src/",
+    "release:note": "bun scripts/create-release-note.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",

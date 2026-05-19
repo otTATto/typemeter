@@ -156,16 +156,16 @@ fn start_listening_rdev(
     thread::spawn(move || {
         if let Err(e) = rdev::listen(move |event| {
             match event.event_type {
-                rdev::EventType::KeyPress(key) => {
-                    if pressed_keys.insert(key) {
-                        let count = {
-                            let mut mc = minute_count.lock().unwrap();
-                            *mc += 1;
-                            *mc
-                        };
-                        let today_total = *today_db_count.lock().unwrap() + count;
-                        let _ = app_handle.emit("keystroke_update", today_total);
-                    }
+                rdev::EventType::KeyPress(key)
+                    if pressed_keys.insert(key) =>
+                {
+                    let count = {
+                        let mut mc = minute_count.lock().unwrap();
+                        *mc += 1;
+                        *mc
+                    };
+                    let today_total = *today_db_count.lock().unwrap() + count;
+                    let _ = app_handle.emit("keystroke_update", today_total);
                 }
                 rdev::EventType::KeyRelease(key) => {
                     pressed_keys.remove(&key);

@@ -20,7 +20,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const version = process.argv[2]
-if (!version) {
+if (!version || version.includes('/') || version.includes('\\')) {
   console.error('Usage: bun scripts/create-release-note.js <version>')
   console.error('Example: bun scripts/create-release-note.js v0.1.0')
   process.exit(1)
@@ -37,7 +37,12 @@ if (existsSync(outputPath)) {
   process.exit(1)
 }
 
-const template = readFileSync(join(root, '.github', 'RELEASE_TEMPLATE.md'), 'utf-8')
+const templatePath = join(root, '.github', 'RELEASE_TEMPLATE.md')
+if (!existsSync(templatePath)) {
+  console.error(`Template file not found: ${templatePath}`)
+  process.exit(1)
+}
+const template = readFileSync(templatePath, 'utf-8')
 const content = template.replaceAll('{version}', normalizedVersion)
 
 mkdirSync(join(root, 'docs', 'releases'), { recursive: true })

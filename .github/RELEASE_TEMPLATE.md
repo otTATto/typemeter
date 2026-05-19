@@ -27,8 +27,12 @@ It counts your keystrokes without ever recording what you type, and all data sta
 > [!NOTE]
 > 🍎 **macOS users**:
 >
-> - The app is not code-signed. On first launch, Gatekeeper may block it.
-> - Go to System Settings → Privacy & Security and click "Open Anyway".
+> - The app is not code-signed. After moving it to the Applications folder, open Terminal and run the following command:
+>   ```sh
+>   sudo xattr -d com.apple.quarantine /Applications/typemeter.app
+>   ```
+> - On first launch, Gatekeeper may block it.
+> - Go to System Settings → Privacy & Security → Input Monitoring, then turn on the toggle for typemeter.app.
 >
 > 🪟 **Windows users**:
 >

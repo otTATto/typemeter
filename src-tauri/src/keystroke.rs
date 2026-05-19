@@ -20,6 +20,7 @@ extern "C" {
         callback: unsafe extern "C" fn(*mut c_void, u32, *mut c_void, *mut c_void) -> *mut c_void,
         user_info: *mut c_void,
     ) -> *mut c_void;
+    fn CGEventGetIntegerValueField(event: *mut c_void, field: u32) -> i64;
 }
 
 #[cfg(target_os = "macos")]
@@ -55,8 +56,14 @@ unsafe extern "C" fn tap_callback(
     event: *mut c_void,
     user_info: *mut c_void,
 ) -> *mut c_void {
+    // - CG_EVENT_KEY_DOWN          : CGEventType における kCGEventKeyDown の値
+    // - kCGKeyboardEventAutorepeat : 長押しで繰り返し送出されるリピートイベントを示すフィールド ID
     const CG_EVENT_KEY_DOWN: u32 = 10;
+    const KCG_KEYBOARD_EVENT_AUTOREPEAT: u32 = 8;
     if event_type == CG_EVENT_KEY_DOWN {
+        if CGEventGetIntegerValueField(event, KCG_KEYBOARD_EVENT_AUTOREPEAT) != 0 {
+            return event;
+        }
         let data = &*(user_info as *const TapUserData);
         let count = {
             let mut mc = data.minute_count.lock().unwrap();
@@ -143,9 +150,12 @@ fn start_listening_rdev(
     app_handle: tauri::AppHandle,
 ) {
     let app_handle_err = app_handle.clone();
+    // rdev は OS のキーリピートをフィルタしないため、長押し中も KeyPress が繰り返し届く
+    // HashSet で押下中のキーを管理し、KeyPress → KeyRelease のサイクルごとに 1 カウントとする
+    let mut pressed_keys = std::collections::HashSet::new();
     thread::spawn(move || {
-        if let Err(e) = rdev::listen(move |event| {
-            if matches!(event.event_type, rdev::EventType::KeyPress(_)) {
+        if let Err(e) = rdev::listen(move |event| match event.event_type {
+            rdev::EventType::KeyPress(key) if pressed_keys.insert(key) => {
                 let count = {
                     let mut mc = minute_count.lock().unwrap();
                     *mc += 1;
@@ -154,6 +164,10 @@ fn start_listening_rdev(
                 let today_total = *today_db_count.lock().unwrap() + count;
                 let _ = app_handle.emit("keystroke_update", today_total);
             }
+            rdev::EventType::KeyRelease(key) => {
+                pressed_keys.remove(&key);
+            }
+            _ => {}
         }) {
             let _ = app_handle_err.emit("listener_error", format!("{e:?}"));
         }

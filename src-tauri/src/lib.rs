@@ -22,6 +22,25 @@ fn get_hourly_counts(date: String, db_path: tauri::State<DbPath>) -> Vec<u64> {
     query_hourly_counts(&db_path.0, &date).to_vec()
 }
 
+/// About ウィンドウを表示する。既に表示中の場合はフォーカスする
+///
+/// # Behavior
+/// About ウィンドウは起動時に `visible: false` で生成済みのため、
+/// ここでは show・center・set_focus のみを行う。
+fn open_about_window_impl(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("about") {
+        let _ = window.show();
+        let _ = window.center();
+        let _ = window.set_focus();
+    }
+}
+
+/// About ウィンドウを開く Tauri コマンド（Windows/Linux のカスタムメニューから呼び出される）
+#[tauri::command]
+fn open_about_window(app: tauri::AppHandle) {
+    open_about_window_impl(&app);
+}
+
 fn resolve_db_path(app: &tauri::App) -> String {
     if let Some(path) = std::env::var("TYPEMETER_DB_PATH")
         .ok()
@@ -88,10 +107,43 @@ pub fn run() {
                     flush_minute_count(&mc_save, &tdc_save, &db_path_save);
                 });
 
+                // macOS: ネイティブメニューバーに Typemeter > About Typemeter を追加
+                #[cfg(target_os = "macos")]
+                {
+                    use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+                    let about_item =
+                        MenuItemBuilder::with_id("about_typemeter", "About Typemeter")
+                            .build(app)?;
+                    let about_id = about_item.id().clone();
+                    let typemeter_submenu = SubmenuBuilder::new(app, "Typemeter")
+                        .item(&about_item)
+                        .build()?;
+                    let menu = MenuBuilder::new(app).item(&typemeter_submenu).build()?;
+                    app.set_menu(menu)?;
+                    app.on_menu_event(move |app_handle, event| {
+                        if event.id() == &about_id {
+                            open_about_window_impl(app_handle);
+                        }
+                    });
+                }
+
+                // Windows/Linux: ネイティブ装飾を除去してカスタムタイトルバーに切り替え
+                #[cfg(not(target_os = "macos"))]
+                {
+                    if let Some(window) = app.get_webview_window("main") {
+                        window.set_decorations(false)?;
+                    }
+                }
+
+                // visible: false で起動しているためここで表示する（装飾変更後に表示することでちらつきを防ぐ）
+                if let Some(window) = app.get_webview_window("main") {
+                    window.show()?;
+                }
+
                 Ok(())
             }
         })
-        .invoke_handler(tauri::generate_handler![get_hourly_counts])
+        .invoke_handler(tauri::generate_handler![get_hourly_counts, open_about_window])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
@@ -105,11 +157,22 @@ pub fn run() {
                 );
             }
             // macOS では赤×でウィンドウを閉じてもプロセスが残り Exit が来ないため、
-            // CloseRequested で明示的に終了する
+            // CloseRequested で明示的に終了する（About などのサブウィンドウは対象外）
             tauri::RunEvent::WindowEvent {
+                label,
+                event: tauri::WindowEvent::CloseRequested { api, .. },
+                ..
+            } if label == "about" => {
+                api.prevent_close();
+                if let Some(window) = app_handle.get_webview_window("about") {
+                    let _ = window.hide();
+                }
+            }
+            tauri::RunEvent::WindowEvent {
+                label,
                 event: tauri::WindowEvent::CloseRequested { .. },
                 ..
-            } => {
+            } if label == "main" => {
                 app_handle.exit(0);
             }
             tauri::RunEvent::Exit => {

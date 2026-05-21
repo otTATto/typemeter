@@ -5,6 +5,7 @@ import DayStamps from '@/components/DayStamps.vue';
 import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import TitleBar from '@/components/TitleBar.vue';
 import { formatDate } from '@/lib/date';
 import {
   fetchHourlyCounts,
@@ -75,10 +76,15 @@ const displayChars = computed(() =>
 );
 
 const DAILY_GOAL = 10000;
+
+// macOS はネイティブメニューバーを使うため、Windows/Linux のみカスタムタイトルバーを表示する
+const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
 </script>
 
 <template>
   <div class="flex flex-col h-screen bg-background-color">
+    <TitleBar v-if="SHOW_TITLE_BAR" />
+
     <!-- Error overlay -->
     <template v-if="listenerError">
       <div class="flex flex-col items-center justify-center h-screen gap-2">

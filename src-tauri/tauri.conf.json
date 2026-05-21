@@ -16,7 +16,18 @@
         "width": 1000,
         "height": 870,
         "minWidth": 680,
-        "minHeight": 200
+        "minHeight": 200,
+        "visible": false
+      },
+      {
+        "label": "about",
+        "title": "About Typemeter",
+        "url": "about.html",
+        "width": 480,
+        "height": 400,
+        "resizable": false,
+        "visible": false,
+        "center": true
       }
     ],
     "security": {

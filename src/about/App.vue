@@ -24,7 +24,9 @@ const openGitHub = () => openUrl('https://github.com/otTATto/typemeter');
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-background-color px-8 pt-8 pb-6 select-none">
+  <div
+    class="flex flex-col justify-center h-screen bg-background-color px-8 py-6 select-none overflow-y-auto"
+  >
     <!-- アプリ名とバージョン -->
     <div class="flex flex-col items-center gap-1.5 mb-6">
       <h1 class="text-4xl font-bold text-base-color tracking-tight">typemeter</h1>
@@ -45,7 +47,7 @@ const openGitHub = () => openUrl('https://github.com/otTATto/typemeter');
     <hr class="border-sub-color/30 mb-5" />
 
     <!-- オープンソースライセンス -->
-    <div class="flex-1 overflow-y-auto">
+    <div>
       <h2 class="text-xs font-bold text-sub-color uppercase tracking-wider mb-3">
         Open Source Licenses
       </h2>

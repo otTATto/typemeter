@@ -20,20 +20,22 @@ const appWindow = getCurrentWindow();
 const isMenuOpen = ref(false);
 const isMaximized = ref(false);
 
-let unlistenResize: (() => void) | null = null;
+let unlistenResize: Promise<() => void> | null = null;
 
-onMounted(async () => {
+onMounted(() => {
   if (props.showMaximize) {
-    isMaximized.value = await appWindow.isMaximized();
-    unlistenResize = await appWindow.onResized(async () => {
+    unlistenResize = (async () => {
       isMaximized.value = await appWindow.isMaximized();
-    });
+      return appWindow.onResized(async () => {
+        isMaximized.value = await appWindow.isMaximized();
+      });
+    })();
   }
   document.addEventListener('click', closeMenu);
 });
 
-onUnmounted(() => {
-  unlistenResize?.();
+onUnmounted(async () => {
+  (await unlistenResize)?.();
   document.removeEventListener('click', closeMenu);
 });
 
@@ -58,12 +60,14 @@ const close = () => appWindow.close();
 <template>
   <div
     data-tauri-drag-region
-    class="relative flex items-center justify-between w-full h-11 bg-bg-color select-none shrink-0"
+    class="relative flex items-center justify-between w-full h-11 bg-background-color select-none shrink-0"
   >
     <!-- 左：Typemeter メニュー -->
     <div class="relative h-full flex items-center">
       <template v-if="showMenu">
         <button
+          aria-haspopup="true"
+          :aria-expanded="isMenuOpen"
           :class="[
             'h-full px-4 text-sm text-base-color hover:bg-sub-color/20 transition-colors cursor-pointer',
             isMenuOpen ? 'bg-sub-color/20' : '',
@@ -100,7 +104,7 @@ const close = () => appWindow.close();
     <!-- 右：ウィンドウ操作ボタン -->
     <div class="flex h-full">
       <button
-        aria-label="最小化"
+        aria-label="Minimize"
         class="flex items-center justify-center w-11 h-full text-base-color hover:bg-sub-color/20 transition-colors cursor-pointer"
         @click="minimize"
       >
@@ -108,7 +112,7 @@ const close = () => appWindow.close();
       </button>
       <button
         v-if="showMaximize"
-        aria-label="最大化を切り替え"
+        aria-label="Toggle maximize"
         class="flex items-center justify-center w-11 h-full text-base-color hover:bg-sub-color/20 transition-colors cursor-pointer"
         @click="toggleMaximize"
       >
@@ -116,7 +120,7 @@ const close = () => appWindow.close();
         <Minimize2 v-else :size="12" />
       </button>
       <button
-        aria-label="閉じる"
+        aria-label="Close"
         class="flex items-center justify-center w-11 h-full text-base-color hover:bg-danger-color hover:text-tm-white transition-colors cursor-pointer"
         @click="close"
       >

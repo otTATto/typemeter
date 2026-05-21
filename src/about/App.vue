@@ -1,25 +1,23 @@
 <script setup lang="ts">
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { platform } from '@tauri-apps/plugin-os';
 import { onMounted, onUnmounted, ref } from 'vue';
 import TitleBar from '@/components/TitleBar.vue';
 import TitleBarOffset from '@/components/TitleBarOffset.vue';
+import { initTheme } from '@/lib/theme';
 
 const version = ref('');
 
-const applyTheme = () => {
-  const saved = localStorage.getItem('theme');
-  const isDark =
-    saved === 'dark' || saved === 'light'
-      ? saved === 'dark'
-      : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  document.documentElement.classList.toggle('dark', isDark);
-};
+// macOS はネイティブメニューバーを使うため、Windows/Linux のみカスタムタイトルバーを表示する
+// UA による初期値で初回レンダリングのちらつきを防ぎ、plugin-os で確定する
+const showTitleBar = ref(!navigator.userAgent.includes('Macintosh'));
+
+let cleanupTheme: (() => void) | null = null;
 
 onMounted(async () => {
-  applyTheme();
-  // storage イベントは他ウィンドウの localStorage 変更時に発火する
-  window.addEventListener('storage', applyTheme);
+  cleanupTheme = initTheme();
+  showTitleBar.value = (await platform()) !== 'macos';
 
   try {
     version.value = await getVersion();
@@ -29,27 +27,24 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener('storage', applyTheme);
+  cleanupTheme?.();
 });
 
 const openRelease = (version: string) =>
   openUrl(`https://github.com/otTATto/typemeter/releases/tag/v${version}`);
 const openX = () => openUrl('https://x.com/0123tato');
 const openGitHub = () => openUrl('https://github.com/otTATto/typemeter');
-
-// macOS はネイティブメニューバーを使うため、Windows/Linux のみカスタムタイトルバーを表示する
-const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
 </script>
 
 <template>
   <div class="flex flex-col h-screen bg-background-color select-none">
     <TitleBar
-      v-if="SHOW_TITLE_BAR"
+      v-if="showTitleBar"
       :show-menu="false"
       :show-maximize="false"
       title="About typemeter"
     />
-    <TitleBarOffset :has-title-bar="SHOW_TITLE_BAR" />
+    <TitleBarOffset :has-title-bar="showTitleBar" />
 
     <div class="flex flex-col justify-center flex-1 px-8 py-6 overflow-y-auto">
       <!-- アプリ名とバージョン -->

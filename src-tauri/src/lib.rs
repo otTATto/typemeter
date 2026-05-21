@@ -29,9 +29,15 @@ fn get_hourly_counts(date: String, db_path: tauri::State<DbPath>) -> Vec<u64> {
 /// ここでは show・center・set_focus のみを行う。
 fn open_about_window_impl(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("about") {
-        let _ = window.show();
-        let _ = window.center();
-        let _ = window.set_focus();
+        if let Err(e) = window.show() {
+            eprintln!("[typemeter] failed to show about window: {e}");
+        }
+        if let Err(e) = window.center() {
+            eprintln!("[typemeter] failed to center about window: {e}");
+        }
+        if let Err(e) = window.set_focus() {
+            eprintln!("[typemeter] failed to focus about window: {e}");
+        }
     }
 }
 
@@ -70,6 +76,7 @@ pub fn run() {
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
         .setup({
             let minute_count = minute_count.clone();
             let today_db_count = today_db_count.clone();
@@ -129,10 +136,8 @@ pub fn run() {
                 // Windows/Linux: ネイティブ装飾を除去してカスタムタイトルバーに切り替え
                 #[cfg(not(target_os = "macos"))]
                 {
-                    for label in ["main", "about"] {
-                        if let Some(window) = app.get_webview_window(label) {
-                            window.set_decorations(false)?;
-                        }
+                    for window in app.webview_windows().values() {
+                        window.set_decorations(false)?;
                     }
                 }
 

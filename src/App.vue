@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { platform } from '@tauri-apps/plugin-os';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import DayNav from '@/components/DayNav.vue';
 import DayStamps from '@/components/DayStamps.vue';
@@ -26,7 +27,12 @@ const listenerError = ref<string | null>(null);
 
 const unlisteners: Array<() => void> = [];
 
+// macOS はネイティブメニューバーを使うため、Windows/Linux のみカスタムタイトルバーを表示する
+// UA による初期値で初回レンダリングのちらつきを防ぎ、plugin-os で確定する
+const showTitleBar = ref(!navigator.userAgent.includes('Macintosh'));
+
 onMounted(async () => {
+  showTitleBar.value = (await platform()) !== 'macos';
   unlisteners.push(
     await subscribeKeystrokeUpdate((total) => {
       todayTotal.value = total;
@@ -77,14 +83,11 @@ const displayChars = computed(() =>
 );
 
 const DAILY_GOAL = 10000;
-
-// macOS はネイティブメニューバーを使うため、Windows/Linux のみカスタムタイトルバーを表示する
-const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
 </script>
 
 <template>
   <div class="flex flex-col h-screen bg-background-color">
-    <TitleBar v-if="SHOW_TITLE_BAR" />
+    <TitleBar v-if="showTitleBar" />
 
     <!-- Error overlay -->
     <template v-if="listenerError">
@@ -95,7 +98,7 @@ const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
     </template>
 
     <template v-else>
-      <TitleBarOffset :has-title-bar="SHOW_TITLE_BAR" />
+      <TitleBarOffset :has-title-bar="showTitleBar" />
 
       <!-- Header -->
       <header class="flex items-center px-6 h-22 shrink-0">

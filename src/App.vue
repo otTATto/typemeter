@@ -89,7 +89,7 @@ const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
     <!-- Error overlay -->
     <template v-if="listenerError">
       <div class="flex flex-col items-center justify-center h-screen gap-2">
-        <p class="text-base text-[#e53e3e] m-0">Failed to start capturing keystrokes.</p>
+        <p class="text-base text-danger-color m-0">Failed to start capturing keystrokes.</p>
         <p class="text-xs opacity-60 m-0 font-mono">{{ listenerError }}</p>
       </div>
     </template>

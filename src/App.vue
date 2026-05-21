@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { platform } from '@tauri-apps/plugin-os';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import DayNav from '@/components/DayNav.vue';
 import DayStamps from '@/components/DayStamps.vue';
 import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import TitleBar from '@/components/TitleBar.vue';
+import TitleBarOffset from '@/components/TitleBarOffset.vue';
 import { formatDate } from '@/lib/date';
 import {
   fetchHourlyCounts,
@@ -24,7 +27,12 @@ const listenerError = ref<string | null>(null);
 
 const unlisteners: Array<() => void> = [];
 
+// macOS はネイティブメニューバーを使うため、Windows/Linux のみカスタムタイトルバーを表示する
+// UA による初期値で初回レンダリングのちらつきを防ぎ、plugin-os で確定する
+const showTitleBar = ref(!navigator.userAgent.includes('Macintosh'));
+
 onMounted(async () => {
+  showTitleBar.value = (await platform()) !== 'macos';
   unlisteners.push(
     await subscribeKeystrokeUpdate((total) => {
       todayTotal.value = total;
@@ -79,15 +87,19 @@ const DAILY_GOAL = 10000;
 
 <template>
   <div class="flex flex-col h-screen bg-background-color">
+    <TitleBar v-if="showTitleBar" />
+
     <!-- Error overlay -->
     <template v-if="listenerError">
       <div class="flex flex-col items-center justify-center h-screen gap-2">
-        <p class="text-base text-[#e53e3e] m-0">Failed to start capturing keystrokes.</p>
+        <p class="text-base text-danger-color m-0">Failed to start capturing keystrokes.</p>
         <p class="text-xs opacity-60 m-0 font-mono">{{ listenerError }}</p>
       </div>
     </template>
 
     <template v-else>
+      <TitleBarOffset :has-title-bar="showTitleBar" />
+
       <!-- Header -->
       <header class="flex items-center px-6 h-22 shrink-0">
         <div class="flex-1"><TabGroup /></div>

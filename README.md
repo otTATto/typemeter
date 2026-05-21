@@ -1,12 +1,12 @@
-# Typemeter
+# typemeter
 
-Typemeter is a local activity meter for your typing, like a pedometer for your work at the keyboard.
+typemeter is a local activity meter for your typing, like a pedometer for your work at the keyboard.
 
-<img width="2059" height="986" alt="Typemeter dashboard screenshot" src="https://github.com/user-attachments/assets/30bc40a4-bde0-48d5-ba2f-725182760510" />
+<img width="2059" height="986" alt="typemeter dashboard screenshot" src="https://github.com/user-attachments/assets/30bc40a4-bde0-48d5-ba2f-725182760510" />
 
 ## Data & Privacy
 
-Typemeter records **only keystroke counts** — never the content of what you type.
+typemeter records **only keystroke counts** — never the content of what you type.
 
 - No characters or key names are stored
 - All data stays on your device (local storage only)

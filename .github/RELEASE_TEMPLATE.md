@@ -1,9 +1,9 @@
 > [!WARNING]
 > ⚠️ This is a **beta release**. Unexpected behavior may occur. If you find any issues, please report them in [Issues](https://github.com/otTATto/typemeter/issues).
 
-## ⌨️ What is Typemeter?
+## ⌨️ What is typemeter?
 
-Typemeter is a local activity meter for your typing — like a pedometer, but for your keyboard.
+typemeter is a local activity meter for your typing — like a pedometer, but for your keyboard.
 It counts your keystrokes without ever recording what you type, and all data stays on your device.
 
 ## ✨ New Features

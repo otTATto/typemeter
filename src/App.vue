@@ -95,7 +95,7 @@ const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
     </template>
 
     <template v-else>
-      <TitleBarOffset v-if="SHOW_TITLE_BAR" />
+      <TitleBarOffset :has-title-bar="SHOW_TITLE_BAR" />
 
       <!-- Header -->
       <header class="flex items-center px-6 h-22 shrink-0">

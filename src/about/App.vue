@@ -49,7 +49,7 @@ const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
       :show-maximize="false"
       title="About typemeter"
     />
-    <TitleBarOffset v-if="SHOW_TITLE_BAR" />
+    <TitleBarOffset :has-title-bar="SHOW_TITLE_BAR" />
 
     <div class="flex flex-col justify-center flex-1 px-8 py-6 overflow-y-auto">
       <!-- アプリ名とバージョン -->

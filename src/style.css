@@ -9,6 +9,7 @@
   --color-tm-dark-black: oklch(40% 0.0098 73deg);
   --color-tm-black: oklch(35% 0.01 80deg);
   --color-tm-green: oklch(80% 0.05 170deg);
+  --color-tm-red: oklch(60% 0.15 15deg);
 }
 
 @font-face {
@@ -36,6 +37,7 @@
   --color-sub-color: var(--sub-color);
   --color-base-color: var(--base-color);
   --color-accent-color: var(--accent-color);
+  --color-danger-color: var(--danger-color);
 }
 
 /* Light mode */
@@ -45,6 +47,7 @@
   --sub-color: var(--color-tm-gray);
   --base-color: var(--color-tm-reddish-black);
   --accent-color: var(--color-tm-green);
+  --danger-color: var(--color-tm-red);
 
   font-family: Manjari, Inter, Avenir, Helvetica, Arial, sans-serif;
   font-synthesis: none;
@@ -61,4 +64,5 @@ html.dark {
   --sub-color: var(--color-tm-gray);
   --base-color: var(--color-tm-ivory);
   --accent-color: var(--color-tm-green);
+  --danger-color: var(--color-tm-red);
 }

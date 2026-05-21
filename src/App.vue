@@ -6,6 +6,7 @@ import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import TitleBar from '@/components/TitleBar.vue';
+import TitleBarOffset from '@/components/TitleBarOffset.vue';
 import { formatDate } from '@/lib/date';
 import {
   fetchHourlyCounts,
@@ -94,6 +95,8 @@ const SHOW_TITLE_BAR = !navigator.userAgent.includes('Macintosh');
     </template>
 
     <template v-else>
+      <TitleBarOffset v-if="SHOW_TITLE_BAR" />
+
       <!-- Header -->
       <header class="flex items-center px-6 h-22 shrink-0">
         <div class="flex-1"><TabGroup /></div>

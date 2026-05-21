@@ -130,8 +130,10 @@ pub fn run() {
                 // Windows/Linux: ネイティブ装飾を除去してカスタムタイトルバーに切り替え
                 #[cfg(not(target_os = "macos"))]
                 {
-                    if let Some(window) = app.get_webview_window("main") {
-                        window.set_decorations(false)?;
+                    for label in ["main", "about"] {
+                        if let Some(window) = app.get_webview_window(label) {
+                            window.set_decorations(false)?;
+                        }
                     }
                 }
 

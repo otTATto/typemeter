@@ -1,25 +1,35 @@
 <script setup lang="ts">
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import TitleBar from '@/components/TitleBar.vue';
 import TitleBarOffset from '@/components/TitleBarOffset.vue';
 
 const version = ref('');
 
-onMounted(async () => {
+const applyTheme = () => {
   const saved = localStorage.getItem('theme');
   const isDark =
     saved === 'dark' || saved === 'light'
       ? saved === 'dark'
       : window.matchMedia('(prefers-color-scheme: dark)').matches;
   document.documentElement.classList.toggle('dark', isDark);
+};
+
+onMounted(async () => {
+  applyTheme();
+  // storage イベントは他ウィンドウの localStorage 変更時に発火する
+  window.addEventListener('storage', applyTheme);
 
   try {
     version.value = await getVersion();
   } catch {
     // version は空文字のまま表示しない
   }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('storage', applyTheme);
 });
 
 const openRelease = (version: string) =>

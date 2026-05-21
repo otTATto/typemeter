@@ -107,15 +107,14 @@ pub fn run() {
                     flush_minute_count(&mc_save, &tdc_save, &db_path_save);
                 });
 
-                // macOS: ネイティブメニューバーに Typemeter > About Typemeter を追加
+                // macOS: ネイティブメニューバーに typemeter > About typemeter を追加
                 #[cfg(target_os = "macos")]
                 {
                     use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-                    let about_item =
-                        MenuItemBuilder::with_id("about_typemeter", "About Typemeter")
-                            .build(app)?;
+                    let about_item = MenuItemBuilder::with_id("about_typemeter", "About typemeter")
+                        .build(app)?;
                     let about_id = about_item.id().clone();
-                    let typemeter_submenu = SubmenuBuilder::new(app, "Typemeter")
+                    let typemeter_submenu = SubmenuBuilder::new(app, "typemeter")
                         .item(&about_item)
                         .build()?;
                     let menu = MenuBuilder::new(app).item(&typemeter_submenu).build()?;
@@ -145,7 +144,10 @@ pub fn run() {
                 Ok(())
             }
         })
-        .invoke_handler(tauri::generate_handler![get_hourly_counts, open_about_window])
+        .invoke_handler(tauri::generate_handler![
+            get_hourly_counts,
+            open_about_window
+        ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 

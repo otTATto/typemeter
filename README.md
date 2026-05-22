@@ -66,7 +66,14 @@ The installer is generated in `src-tauri/target/release/bundle/`.
 
 ## How to Release
 
-### 1. Bump the version
+### 1. Cut a release branch
+
+```sh
+git checkout main && git pull
+git checkout -b release/v0.2.0
+```
+
+### 2. Bump the version
 
 Update the following two fields in `src-tauri/tauri.conf.json`:
 
@@ -75,7 +82,7 @@ Update the following two fields in `src-tauri/tauri.conf.json`:
 | `version`                    | macOS / Linux | `0.2.0`                                  |
 | `bundle.windows.wix.version` | Windows       | `0.2.0.0` (must follow `x.y.z.w` format) |
 
-### 2. Create the release note
+### 3. Create the release note
 
 ```sh
 bun run release:note v0.2.0
@@ -83,19 +90,29 @@ bun run release:note v0.2.0
 
 This generates `docs/releases/v0.2.0.md` from the template in `.github/RELEASE_TEMPLATE.md`.
 
-### 3. Edit the release note
+### 4. Edit the release note
 
 Fill in the **New Features** and **Bug Fixes** sections in `docs/releases/v0.2.0.md`.
 
-### 4. Commit and merge into the release branch
+### 5. Commit and merge into main
 
 ```sh
 git add src-tauri/tauri.conf.json docs/releases/v0.2.0.md
 git commit -m "release: v0.2.0"
 ```
 
-Merge (or push) the commit into the `release` branch. GitHub Actions will then build the app for all platforms and create a **draft** GitHub Release using the release note as the body.
+Open a PR from `release/v0.2.0` into `main` and merge it.
 
-### 5. Publish the release
+### 6. Push a tag
+
+After merging, push a version tag from `main`. GitHub Actions will then build the app for all platforms and create a **draft** GitHub Release using the release note as the body.
+
+```sh
+git checkout main && git pull
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+### 7. Publish the release
 
 Once all builds succeed, open the draft release on GitHub, verify the attached assets, and publish it.

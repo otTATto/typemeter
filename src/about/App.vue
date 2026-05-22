@@ -30,8 +30,10 @@ onMounted(async () => {
     // version は空文字のまま表示しない
   }
 
-  updateInfo.value = await checkForUpdate();
-  updateCheckDone.value = true;
+  checkForUpdate().then((info) => {
+    updateInfo.value = info;
+    updateCheckDone.value = true;
+  });
 });
 
 onUnmounted(() => {

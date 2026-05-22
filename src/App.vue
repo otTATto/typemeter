@@ -36,7 +36,9 @@ const showTitleBar = ref(!navigator.userAgent.includes('Macintosh'));
 
 onMounted(async () => {
   showTitleBar.value = (await platform()) !== 'macos';
-  updateInfo.value = await checkForUpdate();
+  checkForUpdate().then((info) => {
+    updateInfo.value = info;
+  });
   unlisteners.push(
     await subscribeKeystrokeUpdate((total) => {
       todayTotal.value = total;

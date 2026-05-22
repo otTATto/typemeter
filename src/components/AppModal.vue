@@ -96,21 +96,21 @@ const handlePrimaryHrefClick = () => {
           </div>
 
           <!-- Primary button: 外部リンク -->
-          <a
+          <button
             v-if="primaryButton?.href"
-            class="font-bold rounded-md h-[50px] flex items-center justify-center duration-300 ease-in-out"
+            type="button"
+            :disabled="primaryButton.disabled"
+            class="font-bold rounded-md h-[50px] flex items-center justify-center duration-300 ease-in-out disabled:opacity-40 disabled:cursor-not-allowed"
             :class="[
               primaryButton.type === 'alert'
                 ? 'bg-danger-color text-white hover:opacity-80'
                 : 'bg-accent-color text-tm-black hover:opacity-80',
-              primaryButton.disabled
-                ? 'opacity-40 pointer-events-none cursor-not-allowed'
-                : 'cursor-pointer',
+              primaryButton.disabled ? '' : 'cursor-pointer',
             ]"
-            @click.prevent="handlePrimaryHrefClick"
+            @click="handlePrimaryHrefClick"
           >
-            {{ primaryButton.label ?? '' }}
-          </a>
+            <span class="translate-y-0.75">{{ primaryButton.label ?? '' }}</span>
+          </button>
 
           <!-- Primary button: アクション -->
           <button
@@ -126,7 +126,7 @@ const handlePrimaryHrefClick = () => {
             ]"
             @click="primaryButton.onClick()"
           >
-            {{ primaryButton.label ?? '' }}
+            <span class="translate-y-0.75">{{ primaryButton.label ?? '' }}</span>
           </button>
 
           <!-- 閉じるボタン -->
@@ -135,7 +135,7 @@ const handlePrimaryHrefClick = () => {
             class="text-base-color font-bold bg-sub-color/20 hover:bg-sub-color/30 cursor-pointer duration-300 ease-in-out rounded-md h-[50px] flex items-center justify-center"
             @click="emit('close')"
           >
-            {{ props.closeLabel }}
+            <span class="translate-y-0.75">{{ props.closeLabel }}</span>
           </button>
         </div>
       </div>

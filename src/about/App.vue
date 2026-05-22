@@ -2,12 +2,17 @@
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { platform } from '@tauri-apps/plugin-os';
+import { BadgeAlert, CircleCheck } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref } from 'vue';
+import SpeechBubble from '@/components/SpeechBubble.vue';
 import TitleBar from '@/components/TitleBar.vue';
 import TitleBarOffset from '@/components/TitleBarOffset.vue';
 import { initTheme } from '@/lib/theme';
+import { checkForUpdate, type UpdateInfo } from '@/lib/update';
 
 const version = ref('');
+const updateInfo = ref<UpdateInfo | null>(null);
+const updateCheckDone = ref(false);
 
 // macOS はネイティブメニューバーを使うため、Windows/Linux のみカスタムタイトルバーを表示する
 // UA による初期値で初回レンダリングのちらつきを防ぎ、plugin-os で確定する
@@ -24,6 +29,11 @@ onMounted(async () => {
   } catch {
     // version は空文字のまま表示しない
   }
+
+  checkForUpdate().then((info) => {
+    updateInfo.value = info;
+    updateCheckDone.value = true;
+  });
 });
 
 onUnmounted(() => {
@@ -48,15 +58,50 @@ const openGitHub = () => openUrl('https://github.com/otTATto/typemeter');
 
     <div class="flex flex-col justify-center flex-1 px-8 py-6 overflow-y-auto">
       <!-- アプリ名とバージョン -->
-      <div class="flex flex-col items-center gap-1.5 mb-6">
+      <div class="flex flex-col items-center gap-4 mb-6">
         <h1 class="text-4xl font-bold text-base-color tracking-tight">typemeter</h1>
-        <button
-          v-if="version"
-          class="text-sm text-sub-color hover:underline cursor-pointer bg-transparent border-0 p-0"
-          @click="openRelease(version)"
-        >
-          v{{ version }}
-        </button>
+        <div class="flex flex-col items-center gap-2">
+          <!-- バージョン番号（吹き出しの基準要素、button の自然幅に合わせる） -->
+          <div class="relative w-fit">
+            <!-- 吹き出しの位置決めラッパー（absolute はここに付け、SpeechBubble 自身は relative のまま保つ） -->
+            <div
+              v-if="updateCheckDone"
+              :class="[
+                'absolute bottom-full whitespace-nowrap',
+                updateInfo ? 'mb-1 ml-5' : 'ml-15',
+                { 'cursor-pointer': updateInfo },
+              ]"
+              @click="updateInfo && openUrl(updateInfo.releaseUrl)"
+            >
+              <SpeechBubble
+                :variant="updateInfo ? 'alert' : 'normal'"
+                tail="left"
+                :class="[
+                  'shadow-lg rotate-4 duration-300 ease-in-out',
+                  updateInfo ? 'hover:-translate-y-0.5' : '',
+                ]"
+              >
+                <template v-if="updateInfo">
+                  <BadgeAlert :size="12" />
+                  <span class="translate-y-0.75">Update Available! Click to Install</span>
+                </template>
+                <template v-else>
+                  <CircleCheck :size="12" />
+                  <span class="translate-y-0.75">Latest</span>
+                </template>
+              </SpeechBubble>
+            </div>
+
+            <!-- 現在バージョン（クリックでリリースページを開く） -->
+            <button
+              v-if="version"
+              class="text-sm text-sub-color hover:underline cursor-pointer bg-transparent border-0 p-0"
+              @click="openRelease(version)"
+            >
+              v{{ version }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- コピーライトと GitHub リンク -->

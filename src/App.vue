@@ -8,12 +8,14 @@ import TabGroup from '@/components/TabGroup.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import TitleBar from '@/components/TitleBar.vue';
 import TitleBarOffset from '@/components/TitleBarOffset.vue';
+import UpdateModal from '@/components/UpdateModal.vue';
 import { formatDate } from '@/lib/date';
 import {
   fetchHourlyCounts,
   subscribeKeystrokeUpdate,
   subscribeListenerError,
 } from '@/lib/keystroke';
+import { checkForUpdate, type UpdateInfo } from '@/lib/update';
 
 const todayDate = ref(formatDate(new Date()));
 const targetDate = ref(todayDate.value);
@@ -24,6 +26,7 @@ const pastTotal = ref<number | null>(null);
 const displayTotal = computed(() => (isToday.value ? todayTotal.value : pastTotal.value));
 
 const listenerError = ref<string | null>(null);
+const updateInfo = ref<UpdateInfo | null>(null);
 
 const unlisteners: Array<() => void> = [];
 
@@ -33,6 +36,7 @@ const showTitleBar = ref(!navigator.userAgent.includes('Macintosh'));
 
 onMounted(async () => {
   showTitleBar.value = (await platform()) !== 'macos';
+  updateInfo.value = await checkForUpdate();
   unlisteners.push(
     await subscribeKeystrokeUpdate((total) => {
       todayTotal.value = total;
@@ -99,6 +103,13 @@ const DAILY_GOAL = 10000;
 
     <template v-else>
       <TitleBarOffset :has-title-bar="showTitleBar" />
+      <UpdateModal
+        v-if="updateInfo"
+        :version="updateInfo.version"
+        :current-version="updateInfo.currentVersion"
+        :release-url="updateInfo.releaseUrl"
+        @dismiss="updateInfo = null"
+      />
 
       <!-- Header -->
       <header class="flex items-center px-6 h-22 shrink-0">

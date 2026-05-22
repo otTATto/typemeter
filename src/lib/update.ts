@@ -27,7 +27,7 @@ const parseVersion = (v: string): ParsedVersion => {
  * @function latest が current より新しいバージョンかどうかを判定する
  *
  * NOTE:
- *   - プレリリース同士の比較は辞書順（例: "beta.2" > "beta.10" の誤検知が起きうる）
+ *   - プレリリースのセグメントが数値の場合は数値比較、それ以外は辞書順
  *   - リリース版 (pre=null) はプレリリース (pre!=null) より新しいとみなす
  */
 const isNewerThan = (latest: ParsedVersion, current: ParsedVersion): boolean => {
@@ -37,7 +37,21 @@ const isNewerThan = (latest: ParsedVersion, current: ParsedVersion): boolean => 
   if (latest.pre === null && current.pre !== null) return true;
   if (latest.pre !== null && current.pre === null) return false;
   if (latest.pre === null && current.pre === null) return false;
-  return (latest.pre ?? '') > (current.pre ?? '');
+
+  const lParts = (latest.pre ?? '').split('.');
+  const cParts = (current.pre ?? '').split('.');
+  for (let i = 0; i < Math.max(lParts.length, cParts.length); i++) {
+    const l = lParts[i];
+    const c = cParts[i];
+    if (l === undefined) return false;
+    if (c === undefined) return true;
+    if (l === c) continue;
+    const lNum = Number(l);
+    const cNum = Number(c);
+    if (!isNaN(lNum) && !isNaN(cNum)) return lNum > cNum;
+    return l > c;
+  }
+  return false;
 };
 
 /**
@@ -47,7 +61,13 @@ const isNewerThan = (latest: ParsedVersion, current: ParsedVersion): boolean => 
  */
 export const checkForUpdate = async (): Promise<UpdateInfo | null> => {
   try {
-    const [currentVersion, response] = await Promise.all([getVersion(), fetch(RELEASES_API_URL)]);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const [currentVersion, response] = await Promise.all([
+      getVersion(),
+      fetch(RELEASES_API_URL, { signal: controller.signal }),
+    ]);
+    clearTimeout(timeoutId);
 
     if (!response.ok) return null;
 

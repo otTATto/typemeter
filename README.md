@@ -99,6 +99,7 @@ Fill in the **New Features** and **Bug Fixes** sections in `docs/releases/v0.2.0
 ```sh
 git add src-tauri/tauri.conf.json docs/releases/v0.2.0.md
 git commit -m "release: v0.2.0"
+git push origin release/v0.2.0
 ```
 
 Open a PR from `release/v0.2.0` into `main` and merge it.

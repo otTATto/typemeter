@@ -1,4 +1,4 @@
-import { getTheme, onThemeChange, type Theme } from '@/lib/settings';
+import { cacheThemeForInitialPaint, getTheme, onThemeChange, type Theme } from '@/lib/settings';
 
 /**
  * @function テーマ設定からダークモードかどうかを解決する
@@ -36,10 +36,13 @@ export const initTheme = (): (() => void) => {
   (async () => {
     explicitTheme = await getTheme();
     applyTheme(explicitTheme);
+    // キャッシュの欠損や手動編集からの自己修復
+    cacheThemeForInitialPaint(explicitTheme);
 
     const unlisten = await onThemeChange((theme) => {
       explicitTheme = theme;
       applyTheme(theme);
+      cacheThemeForInitialPaint(theme);
     });
 
     // 購読完了前に cleanup が呼ばれていた場合は即座に unlisten する

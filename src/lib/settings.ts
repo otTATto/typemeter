@@ -17,6 +17,18 @@ type SettingsSchema = {
 const SETTINGS_FILE = 'settings.json';
 const DEFAULT_ALWAYS_ON_TOP = false;
 
+/**
+ * localStorage 上でテーマの初期描画用キャッシュを保持するキー
+ *
+ * NOTE:
+ *   - 真実の源はあくまで tauri-plugin-store の settings.json であり、
+ *     このキャッシュは HTML の同期インラインスクリプトが初回描画時の
+ *     ちらつきを防ぐためだけに参照する
+ *   - settings.json との整合は src/lib/theme.ts の initTheme() が
+ *     読み込み時・変更購読時に補正する
+ */
+export const THEME_CACHE_STORAGE_KEY = 'theme';
+
 let storePromise: Promise<Store> | null = null;
 
 /**
@@ -29,6 +41,21 @@ const getSettingsStore = (): Promise<Store> => {
     storePromise = load(SETTINGS_FILE);
   }
   return storePromise;
+};
+
+/**
+ * @function テーマを初期描画用キャッシュ（localStorage）に反映する
+ *
+ * @param theme 保存するテーマ。null の場合はキャッシュを削除する（OS 設定に追従）
+ *
+ * NOTE: このキャッシュは初期描画のちらつき防止専用であり、真実の源は settings.json
+ */
+export const cacheThemeForInitialPaint = (theme: Theme | null): void => {
+  if (theme === null) {
+    localStorage.removeItem(THEME_CACHE_STORAGE_KEY);
+  } else {
+    localStorage.setItem(THEME_CACHE_STORAGE_KEY, theme);
+  }
 };
 
 /**
@@ -83,8 +110,13 @@ export const getTheme = async (): Promise<Theme | null> => (await getValue('them
 /**
  * @function テーマ設定を保存する
  * @param theme 保存するテーマ
+ *
+ * NOTE: ストアへの保存成功後、初期描画用キャッシュ（localStorage）も更新する
  */
-export const setTheme = (theme: Theme): Promise<void> => setValue('theme', theme);
+export const setTheme = async (theme: Theme): Promise<void> => {
+  await setValue('theme', theme);
+  cacheThemeForInitialPaint(theme);
+};
 
 /**
  * @function テーマ設定の変更を購読する

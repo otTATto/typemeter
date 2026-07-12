@@ -72,6 +72,132 @@ fn open_settings_window(app: tauri::AppHandle) {
     open_settings_window_impl(&app);
 }
 
+/// メインウィンドウを表示してフォーカスする
+///
+/// # Parameters
+/// * `app` - アプリケーションハンドル
+///
+/// # Behavior
+/// * トレイメニュー・トレイアイコンのクリック・二重起動検知の各コールバックから共通で呼び出される
+/// * macOS では常駐中に Dock アイコンを消しているため、表示前に activation policy を
+///   `Regular` に戻して Dock アイコンを復帰させる
+fn show_main_window(app: &tauri::AppHandle) {
+    #[cfg(target_os = "macos")]
+    if let Err(e) = app.set_activation_policy(tauri::ActivationPolicy::Regular) {
+        eprintln!("[typemeter] failed to set activation policy: {e}");
+    }
+
+    if let Some(window) = app.get_webview_window("main") {
+        if let Err(e) = window.show() {
+            eprintln!("[typemeter] failed to show main window: {e}");
+        }
+        if let Err(e) = window.unminimize() {
+            eprintln!("[typemeter] failed to unminimize main window: {e}");
+        }
+        if let Err(e) = window.set_focus() {
+            eprintln!("[typemeter] failed to focus main window: {e}");
+        }
+    }
+}
+
+/// システムトレイのメニュー・アイコン・イベントハンドラを構築して登録する
+///
+/// # Parameters
+/// * `app` - セットアップ中の `App`
+///
+/// # Behavior
+/// * メニュー構成（Open typemeter / Settings… / Quit typemeter）は OS 共通
+/// * アイコン・クリック挙動は `configure_tray_platform` に切り出した OS 固有部分で分岐する
+///
+/// # Errors
+/// メニューやトレイアイコンの構築に失敗した場合、その `tauri::Error` を返す
+fn build_tray(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::MenuBuilder;
+    use tauri::menu::MenuItemBuilder;
+    use tauri::tray::TrayIconBuilder;
+
+    let open_item = MenuItemBuilder::with_id("tray_open", "Open typemeter").build(app)?;
+    let open_id = open_item.id().clone();
+    let settings_item = MenuItemBuilder::with_id("tray_settings", "Settings…").build(app)?;
+    let settings_id = settings_item.id().clone();
+    let quit_item = MenuItemBuilder::with_id("tray_quit", "Quit typemeter").build(app)?;
+    let quit_id = quit_item.id().clone();
+
+    let menu = MenuBuilder::new(app)
+        .item(&open_item)
+        .item(&settings_item)
+        .separator()
+        .item(&quit_item)
+        .build()?;
+
+    let builder = TrayIconBuilder::new()
+        .menu(&menu)
+        .tooltip("typemeter")
+        .on_menu_event(move |app_handle, event| {
+            if event.id() == &open_id {
+                show_main_window(app_handle);
+            } else if event.id() == &settings_id {
+                open_settings_window_impl(app_handle);
+            } else if event.id() == &quit_id {
+                app_handle.exit(0);
+            }
+        });
+
+    configure_tray_platform(builder, app)?.build(app)?;
+
+    Ok(())
+}
+
+/// トレイアイコンの見た目とクリック挙動のうち、OS 固有の部分だけを設定する
+///
+/// # Parameters
+/// * `builder` - `build_tray` で共通設定済みの `TrayIconBuilder`
+/// * `app` - アイコン取得に使う `App`（Windows/Linux でのみ使用）
+///
+/// # Behavior
+/// * Windows/Linux: アプリのウィンドウアイコンを流用し、左クリック = メインウィンドウ表示、
+///   右クリック = メニュー表示という Windows の慣例に合わせる
+///   （`show_menu_on_left_click(false)` としたうえで左クリックのみ `show_main_window` を呼ぶ）
+/// * macOS: 黒 + 透過のテンプレートアイコンを使い、クリックでメニューを開く macOS の慣例に
+///   合わせて `show_menu_on_left_click` はデフォルト（true）のままとする
+///
+/// # Errors
+/// アイコン画像の読み込みに失敗した場合、その `tauri::Error` を返す
+#[cfg(not(target_os = "macos"))]
+fn configure_tray_platform(
+    builder: tauri::tray::TrayIconBuilder<tauri::Wry>,
+    app: &tauri::App,
+) -> tauri::Result<tauri::tray::TrayIconBuilder<tauri::Wry>> {
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
+
+    Ok(builder
+        .icon(
+            app.default_window_icon()
+                .expect("default window icon is not set")
+                .clone(),
+        )
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        }))
+}
+
+#[cfg(target_os = "macos")]
+fn configure_tray_platform(
+    builder: tauri::tray::TrayIconBuilder<tauri::Wry>,
+    _app: &tauri::App,
+) -> tauri::Result<tauri::tray::TrayIconBuilder<tauri::Wry>> {
+    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-macos.png"))?;
+    Ok(builder.icon(icon).icon_as_template(true))
+}
+
 /// 起動時に保存済みの `alwaysOnTop` 設定をメインウィンドウへ適用する
 ///
 /// # Behavior
@@ -133,6 +259,9 @@ pub fn run() {
     let today_db_count = Arc::new(Mutex::new(0u64));
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app_handle, _args, _cwd| {
+            show_main_window(app_handle);
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -207,6 +336,9 @@ pub fn run() {
                     }
                 }
 
+                // バックグラウンド常駐用のシステムトレイアイコンを構築する
+                build_tray(app)?;
+
                 // 保存済みの alwaysOnTop 設定を適用する（ちらつき防止のため show() より前に行う）
                 apply_always_on_top_from_settings(app);
 
@@ -235,24 +367,29 @@ pub fn run() {
                     app_handle.clone(),
                 );
             }
-            // macOS では赤×でウィンドウを閉じてもプロセスが残り Exit が来ないため、
-            // CloseRequested で明示的に終了する（About/Settings などのサブウィンドウは対象外）
+            // ウィンドウの × はプロセス終了ではなく非表示として扱う（バックグラウンド常駐）。
+            // プロセスの終了はトレイメニューの Quit typemeter からのみ行う
             tauri::RunEvent::WindowEvent {
                 label,
                 event: tauri::WindowEvent::CloseRequested { api, .. },
                 ..
-            } if label == "about" || label == "settings" => {
+            } if label == "main" || label == "about" || label == "settings" => {
                 api.prevent_close();
                 if let Some(window) = app_handle.get_webview_window(&label) {
-                    let _ = window.hide();
+                    if let Err(e) = window.hide() {
+                        eprintln!("[typemeter] failed to hide {label} window: {e}");
+                    }
                 }
-            }
-            tauri::RunEvent::WindowEvent {
-                label,
-                event: tauri::WindowEvent::CloseRequested { .. },
-                ..
-            } if label == "main" => {
-                app_handle.exit(0);
+
+                // macOS: メインウィンドウを隠している間は Dock アイコンも消す
+                #[cfg(target_os = "macos")]
+                if label == "main" {
+                    if let Err(e) =
+                        app_handle.set_activation_policy(tauri::ActivationPolicy::Accessory)
+                    {
+                        eprintln!("[typemeter] failed to set activation policy: {e}");
+                    }
+                }
             }
             tauri::RunEvent::Exit => {
                 let db_path = app_handle.state::<DbPath>();

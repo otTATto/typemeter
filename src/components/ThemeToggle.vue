@@ -3,12 +3,10 @@
 <script setup lang="ts">
 import { Moon, Sun } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref } from 'vue';
-import { getTheme, onThemeChange, setTheme, type Theme } from '@/lib/settings';
+import { getTheme, onThemeChange, setTheme } from '@/lib/settings';
+import { resolveIsDark } from '@/lib/theme';
 
 const isDark = ref(false);
-
-const resolveIsDark = (theme: Theme | null): boolean =>
-  theme === 'dark' || (theme === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
 const toggle = () => {
   const next = !isDark.value;

@@ -1,10 +1,16 @@
 import { getTheme, onThemeChange, type Theme } from '@/lib/settings';
 
+/**
+ * @function テーマ設定からダークモードかどうかを解決する
+ *
+ * @param theme 保存されているテーマ。null（未設定）の場合は OS 設定に追従する
+ * @returns ダークモードなら true
+ */
+export const resolveIsDark = (theme: Theme | null): boolean =>
+  theme === 'dark' || (theme === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
 const applyTheme = (theme: Theme | null) => {
-  const isDark =
-    theme === 'dark' ||
-    (theme === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
+  document.documentElement.classList.toggle('dark', resolveIsDark(theme));
 };
 
 /**

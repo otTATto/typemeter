@@ -81,37 +81,48 @@ fn open_settings_window(app: tauri::AppHandle) {
 /// * トレイメニュー・トレイアイコンのクリック・二重起動検知の各コールバックから共通で呼び出される
 /// * macOS では常駐中に Dock アイコンを消しているため、表示前に activation policy を
 ///   `Regular` に戻して Dock アイコンを復帰させる
+/// * 二重起動検知のコールバックはメインスレッド外（tokio ワーカー）で呼ばれるため、
+///   policy 切替と表示を 1 つのクロージャにまとめてメインスレッドへディスパッチする
+///   （別々の非同期メッセージとして流すと AppKit 側の反映が追いつかず表示に失敗することがある）
 fn show_main_window(app: &tauri::AppHandle) {
-    #[cfg(target_os = "macos")]
-    if let Err(e) = app.set_activation_policy(tauri::ActivationPolicy::Regular) {
-        eprintln!("[typemeter] failed to set activation policy: {e}");
-    }
+    let app_handle = app.clone();
+    let dispatch_result = app.run_on_main_thread(move || {
+        #[cfg(target_os = "macos")]
+        if let Err(e) = app_handle.set_activation_policy(tauri::ActivationPolicy::Regular) {
+            eprintln!("[typemeter] failed to set activation policy: {e}");
+        }
 
-    if let Some(window) = app.get_webview_window("main") {
-        if let Err(e) = window.show() {
-            eprintln!("[typemeter] failed to show main window: {e}");
+        if let Some(window) = app_handle.get_webview_window("main") {
+            if let Err(e) = window.show() {
+                eprintln!("[typemeter] failed to show main window: {e}");
+            }
+            if let Err(e) = window.unminimize() {
+                eprintln!("[typemeter] failed to unminimize main window: {e}");
+            }
+            if let Err(e) = window.set_focus() {
+                eprintln!("[typemeter] failed to focus main window: {e}");
+            }
         }
-        if let Err(e) = window.unminimize() {
-            eprintln!("[typemeter] failed to unminimize main window: {e}");
-        }
-        if let Err(e) = window.set_focus() {
-            eprintln!("[typemeter] failed to focus main window: {e}");
-        }
+    });
+    if let Err(e) = dispatch_result {
+        eprintln!("[typemeter] failed to dispatch show_main_window to main thread: {e}");
     }
 }
 
 /// システムトレイのメニュー・アイコン・イベントハンドラを構築して登録する
 ///
 /// # Parameters
-/// * `app` - セットアップ中の `App`
+/// * `app` - アプリケーションハンドル
 ///
 /// # Behavior
 /// * メニュー構成（Open typemeter / Settings… / Quit typemeter）は OS 共通
 /// * アイコン・クリック挙動は `configure_tray_platform` に切り出した OS 固有部分で分岐する
+/// * setup 中ではなく `RunEvent::Ready` から呼び出すこと（macOS ではイベントループ開始前に
+///   構築したトレイがメニューバーに表示されない問題があるため）
 ///
 /// # Errors
 /// メニューやトレイアイコンの構築に失敗した場合、その `tauri::Error` を返す
-fn build_tray(app: &tauri::App) -> tauri::Result<()> {
+fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     use tauri::menu::MenuBuilder;
     use tauri::menu::MenuItemBuilder;
     use tauri::tray::TrayIconBuilder;
@@ -152,7 +163,7 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
 ///
 /// # Parameters
 /// * `builder` - `build_tray` で共通設定済みの `TrayIconBuilder`
-/// * `app` - アイコン取得に使う `App`（Windows/Linux でのみ使用）
+/// * `app` - アイコン取得に使うアプリケーションハンドル（Windows/Linux でのみ使用）
 ///
 /// # Behavior
 /// * Windows/Linux: アプリのウィンドウアイコンを流用し、左クリック = メインウィンドウ表示、
@@ -166,7 +177,7 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
 #[cfg(not(target_os = "macos"))]
 fn configure_tray_platform(
     builder: tauri::tray::TrayIconBuilder<tauri::Wry>,
-    app: &tauri::App,
+    app: &tauri::AppHandle,
 ) -> tauri::Result<tauri::tray::TrayIconBuilder<tauri::Wry>> {
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 
@@ -192,7 +203,7 @@ fn configure_tray_platform(
 #[cfg(target_os = "macos")]
 fn configure_tray_platform(
     builder: tauri::tray::TrayIconBuilder<tauri::Wry>,
-    _app: &tauri::App,
+    _app: &tauri::AppHandle,
 ) -> tauri::Result<tauri::tray::TrayIconBuilder<tauri::Wry>> {
     let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-macos.png"))?;
     Ok(builder.icon(icon).icon_as_template(true))
@@ -336,9 +347,6 @@ pub fn run() {
                     }
                 }
 
-                // バックグラウンド常駐用のシステムトレイアイコンを構築する
-                build_tray(app)?;
-
                 // 保存済みの alwaysOnTop 設定を適用する（ちらつき防止のため show() より前に行う）
                 apply_always_on_top_from_settings(app);
 
@@ -361,6 +369,11 @@ pub fn run() {
     app.run(move |app_handle, event| {
         match event {
             tauri::RunEvent::Ready => {
+                // バックグラウンド常駐用のシステムトレイアイコンを構築する
+                // （setup 中に構築すると macOS でメニューバーに表示されないため Ready で行う）
+                if let Err(e) = build_tray(app_handle) {
+                    eprintln!("[typemeter] failed to build tray icon: {e}");
+                }
                 keystroke::start_listening(
                     minute_count.clone(),
                     today_db_count.clone(),

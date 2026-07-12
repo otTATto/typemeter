@@ -52,6 +52,11 @@ const openAbout = async () => {
   await invoke('open_about_window');
 };
 
+const openSettings = async () => {
+  closeMenu();
+  await invoke('open_settings_window');
+};
+
 const minimize = () => appWindow.minimize();
 const toggleMaximize = () => appWindow.toggleMaximize();
 const close = () => appWindow.close();
@@ -87,6 +92,12 @@ const close = () => appWindow.close();
               @click="openAbout"
             >
               About typemeter
+            </button>
+            <button
+              class="w-full text-left px-4 py-2 text-sm text-base-color hover:bg-sub-color/20 rounded-2xl transition-colors cursor-pointer"
+              @click="openSettings"
+            >
+              Settings…
             </button>
           </div>
         </Transition>

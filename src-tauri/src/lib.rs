@@ -181,12 +181,16 @@ fn configure_tray_platform(
 ) -> tauri::Result<tauri::tray::TrayIconBuilder<tauri::Wry>> {
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 
+    // アイコン未設定でもトレイ自体は構築する（メニュー操作は可能なため、起動不能より良い）
+    let builder = match app.default_window_icon() {
+        Some(icon) => builder.icon(icon.clone()),
+        None => {
+            eprintln!("[typemeter] warning: default window icon is not set");
+            builder
+        }
+    };
+
     Ok(builder
-        .icon(
-            app.default_window_icon()
-                .expect("default window icon is not set")
-                .clone(),
-        )
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {

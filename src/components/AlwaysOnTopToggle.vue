@@ -4,6 +4,7 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Pin, PinOff } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
+import ToggleSwitch from '@/components/ToggleSwitch.vue';
 import { getAlwaysOnTop, setAlwaysOnTop } from '@/lib/settings';
 
 const isPinned = ref(false);
@@ -33,20 +34,12 @@ const toggle = async () => {
 </script>
 
 <template>
-  <button
-    class="flex items-center justify-center w-13.5 h-11 border-0 bg-transparent cursor-pointer p-0"
+  <ToggleSwitch
+    :is-on="isPinned"
     :aria-label="isPinned ? '常に最前面に表示をオフにする' : '常に最前面に表示をオンにする'"
-    :aria-pressed="isPinned"
-    @click="toggle"
+    @toggle="toggle"
   >
-    <span class="flex items-center w-13.5 h-7 bg-sub-color rounded-[14px] p-0.5">
-      <span
-        class="flex items-center justify-center size-6 bg-pond-color rounded-full text-base-color transition-transform duration-200 ease-in-out"
-        :class="isPinned ? 'translate-x-[26px]' : 'translate-x-0'"
-      >
-        <Pin v-if="isPinned" :size="12" />
-        <PinOff v-else :size="12" />
-      </span>
-    </span>
-  </button>
+    <Pin v-if="isPinned" :size="12" />
+    <PinOff v-else :size="12" />
+  </ToggleSwitch>
 </template>

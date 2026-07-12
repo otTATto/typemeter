@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import { Moon, Sun } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref } from 'vue';
+import ToggleSwitch from '@/components/ToggleSwitch.vue';
 import { getTheme, onThemeChange, setTheme } from '@/lib/settings';
 import { resolveIsDark } from '@/lib/theme';
 
@@ -43,20 +44,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <button
-    class="flex items-center justify-center w-13.5 h-11 border-0 bg-transparent cursor-pointer p-0"
+  <ToggleSwitch
+    :is-on="isDark"
     :aria-label="isDark ? 'ライトモードに切り替え' : 'ダークモードに切り替え'"
-    :aria-pressed="isDark"
-    @click="toggle"
+    @toggle="toggle"
   >
-    <span class="flex items-center w-13.5 h-7 bg-sub-color rounded-[14px] p-0.5">
-      <span
-        class="flex items-center justify-center size-6 bg-pond-color rounded-full text-base-color transition-transform duration-200 ease-in-out"
-        :class="isDark ? 'translate-x-[26px]' : 'translate-x-0'"
-      >
-        <Moon v-if="isDark" :size="12" />
-        <Sun v-else :size="12" />
-      </span>
-    </span>
-  </button>
+    <Moon v-if="isDark" :size="12" />
+    <Sun v-else :size="12" />
+  </ToggleSwitch>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { platform } from '@tauri-apps/plugin-os';
 import { onMounted, onUnmounted, ref } from 'vue';
+import LaunchAtLoginToggle from '@/components/LaunchAtLoginToggle.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import TitleBar from '@/components/TitleBar.vue';
 import TitleBarOffset from '@/components/TitleBarOffset.vue';
@@ -35,6 +36,14 @@ onUnmounted(() => {
       >
         <span id="theme-label" class="text-sm text-base-color">Light/Dark Theme</span>
         <ThemeToggle />
+      </div>
+      <div
+        class="flex items-center justify-between h-11"
+        role="group"
+        aria-labelledby="launch-at-login-label"
+      >
+        <span id="launch-at-login-label" class="text-sm text-base-color">Launch at Login</span>
+        <LaunchAtLoginToggle />
       </div>
     </main>
   </div>

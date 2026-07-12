@@ -15,40 +15,18 @@ type SettingsSchema = {
 };
 
 const SETTINGS_FILE = 'settings.json';
-const LEGACY_THEME_STORAGE_KEY = 'theme';
 const DEFAULT_ALWAYS_ON_TOP = false;
 
 let storePromise: Promise<Store> | null = null;
 
 /**
- * @function localStorage に保存されていた旧テーマ設定をストアへ移行する
- *
- * NOTE: ストアに theme キーが既に存在する場合、または localStorage に有効な値が無い場合は何もしない
- */
-const migrateLegacyTheme = async (store: Store): Promise<void> => {
-  if (await store.has('theme')) return;
-
-  const legacy = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
-  if (legacy !== 'light' && legacy !== 'dark') return;
-
-  await store.set('theme', legacy);
-  await store.save();
-  localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
-};
-
-/**
  * @function 設定ストア（settings.json）をロードする
  *
- * NOTE:
- *   - モジュール内でシングルトンとして管理し、複数回呼ばれても同じ Store を返す
- *   - 初回ロード時に localStorage からのテーマ設定移行を行う
+ * NOTE: モジュール内でシングルトンとして管理し、複数回呼ばれても同じ Store を返す
  */
 const getSettingsStore = (): Promise<Store> => {
   if (!storePromise) {
-    storePromise = load(SETTINGS_FILE).then(async (store) => {
-      await migrateLegacyTheme(store);
-      return store;
-    });
+    storePromise = load(SETTINGS_FILE);
   }
   return storePromise;
 };

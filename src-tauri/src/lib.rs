@@ -274,9 +274,11 @@ pub fn run() {
     let today_db_count = Arc::new(Mutex::new(0u64));
 
     let app = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app_handle, _args, _cwd| {
-            show_main_window(app_handle);
-        }))
+        .plugin(tauri_plugin_single_instance::init(
+            |app_handle, _args, _cwd| {
+                show_main_window(app_handle);
+            },
+        ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_store::Builder::default().build())

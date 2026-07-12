@@ -47,6 +47,64 @@ fn open_about_window(app: tauri::AppHandle) {
     open_about_window_impl(&app);
 }
 
+/// Settings ウィンドウを表示する。既に表示中の場合はフォーカスする
+///
+/// # Behavior
+/// Settings ウィンドウは起動時に `visible: false` で生成済みのため、
+/// ここでは show・center・set_focus のみを行う。
+fn open_settings_window_impl(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("settings") {
+        if let Err(e) = window.show() {
+            eprintln!("[typemeter] failed to show settings window: {e}");
+        }
+        if let Err(e) = window.center() {
+            eprintln!("[typemeter] failed to center settings window: {e}");
+        }
+        if let Err(e) = window.set_focus() {
+            eprintln!("[typemeter] failed to focus settings window: {e}");
+        }
+    }
+}
+
+/// Settings ウィンドウを開く Tauri コマンド（Windows/Linux のカスタムメニューから呼び出される）
+#[tauri::command]
+fn open_settings_window(app: tauri::AppHandle) {
+    open_settings_window_impl(&app);
+}
+
+/// 起動時に保存済みの `alwaysOnTop` 設定をメインウィンドウへ適用する
+///
+/// # Behavior
+/// * ストアの読み込みに失敗した場合はエラーを報告し、false 扱いとする
+/// * `alwaysOnTop` キーが存在しない場合も false 扱いとする
+/// * ちらつき防止のため、呼び出し側で `window.show()` より前に実行すること
+fn apply_always_on_top_from_settings(app: &tauri::App) {
+    use tauri_plugin_store::StoreExt;
+
+    let store = match app.store("settings.json") {
+        Ok(store) => store,
+        Err(e) => {
+            eprintln!("[typemeter] failed to load settings store: {e}");
+            return;
+        }
+    };
+
+    let is_always_on_top = store
+        .get("alwaysOnTop")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+
+    if !is_always_on_top {
+        return;
+    }
+
+    if let Some(window) = app.get_webview_window("main") {
+        if let Err(e) = window.set_always_on_top(true) {
+            eprintln!("[typemeter] failed to set always-on-top: {e}");
+        }
+    }
+}
+
 fn resolve_db_path(app: &tauri::App) -> String {
     if let Some(path) = std::env::var("TYPEMETER_DB_PATH")
         .ok()
@@ -77,6 +135,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .setup({
             let minute_count = minute_count.clone();
             let today_db_count = today_db_count.clone();
@@ -114,21 +173,28 @@ pub fn run() {
                     flush_minute_count(&mc_save, &tdc_save, &db_path_save);
                 });
 
-                // macOS: ネイティブメニューバーに typemeter > About typemeter を追加
+                // macOS: ネイティブメニューバーに typemeter > About typemeter / Settings… を追加
                 #[cfg(target_os = "macos")]
                 {
                     use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
                     let about_item = MenuItemBuilder::with_id("about_typemeter", "About typemeter")
                         .build(app)?;
                     let about_id = about_item.id().clone();
+                    let settings_item = MenuItemBuilder::with_id("settings", "Settings…")
+                        .accelerator("Cmd+,")
+                        .build(app)?;
+                    let settings_id = settings_item.id().clone();
                     let typemeter_submenu = SubmenuBuilder::new(app, "typemeter")
                         .item(&about_item)
+                        .item(&settings_item)
                         .build()?;
                     let menu = MenuBuilder::new(app).item(&typemeter_submenu).build()?;
                     app.set_menu(menu)?;
                     app.on_menu_event(move |app_handle, event| {
                         if event.id() == &about_id {
                             open_about_window_impl(app_handle);
+                        } else if event.id() == &settings_id {
+                            open_settings_window_impl(app_handle);
                         }
                     });
                 }
@@ -141,6 +207,9 @@ pub fn run() {
                     }
                 }
 
+                // 保存済みの alwaysOnTop 設定を適用する（ちらつき防止のため show() より前に行う）
+                apply_always_on_top_from_settings(app);
+
                 // visible: false で起動しているためここで表示する（装飾変更後に表示することでちらつきを防ぐ）
                 if let Some(window) = app.get_webview_window("main") {
                     window.show()?;
@@ -151,7 +220,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_hourly_counts,
-            open_about_window
+            open_about_window,
+            open_settings_window
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
@@ -166,14 +236,14 @@ pub fn run() {
                 );
             }
             // macOS では赤×でウィンドウを閉じてもプロセスが残り Exit が来ないため、
-            // CloseRequested で明示的に終了する（About などのサブウィンドウは対象外）
+            // CloseRequested で明示的に終了する（About/Settings などのサブウィンドウは対象外）
             tauri::RunEvent::WindowEvent {
                 label,
                 event: tauri::WindowEvent::CloseRequested { api, .. },
                 ..
-            } if label == "about" => {
+            } if label == "about" || label == "settings" => {
                 api.prevent_close();
-                if let Some(window) = app_handle.get_webview_window("about") {
+                if let Some(window) = app_handle.get_webview_window(&label) {
                     let _ = window.hide();
                 }
             }

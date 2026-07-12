@@ -1,28 +1,44 @@
 <!-- ライト / ダークモード切り替えトグルスイッチ -->
-<!-- App.vue ヘッダー右側に配置される -->
+<!-- Settings ウィンドウの外観設定行に配置される -->
 <script setup lang="ts">
 import { Moon, Sun } from 'lucide-vue-next';
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { getTheme, onThemeChange, setTheme } from '@/lib/settings';
+import { resolveIsDark } from '@/lib/theme';
 
 const isDark = ref(false);
 
-const applyTheme = (dark: boolean) => {
-  document.documentElement.classList.toggle('dark', dark);
-  localStorage.setItem('theme', dark ? 'dark' : 'light');
-};
-
 const toggle = () => {
-  isDark.value = !isDark.value;
-  applyTheme(isDark.value);
+  const next = !isDark.value;
+  isDark.value = next;
+  setTheme(next ? 'dark' : 'light').catch((err) => {
+    console.error('[ThemeToggle] failed to save theme:', err);
+    isDark.value = !next;
+  });
 };
 
-onMounted(() => {
-  const saved = localStorage.getItem('theme');
-  isDark.value =
-    saved === 'dark' || saved === 'light'
-      ? saved === 'dark'
-      : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(isDark.value);
+let isDisposed = false;
+let unlistenThemeChange: (() => void) | null = null;
+
+onMounted(async () => {
+  const theme = await getTheme();
+  if (isDisposed) return;
+  isDark.value = resolveIsDark(theme);
+
+  const unlisten = await onThemeChange((theme) => {
+    isDark.value = resolveIsDark(theme);
+  });
+  // 購読完了前に cleanup が呼ばれていた場合は即座に unlisten する
+  if (isDisposed) {
+    unlisten();
+  } else {
+    unlistenThemeChange = unlisten;
+  }
+});
+
+onUnmounted(() => {
+  isDisposed = true;
+  unlistenThemeChange?.();
 });
 </script>
 

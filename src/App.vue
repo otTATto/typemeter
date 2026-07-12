@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { platform } from '@tauri-apps/plugin-os';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import AlwaysOnTopToggle from '@/components/AlwaysOnTopToggle.vue';
 import DayNav from '@/components/DayNav.vue';
 import DayStamps from '@/components/DayStamps.vue';
 import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
-import ThemeToggle from '@/components/ThemeToggle.vue';
 import TitleBar from '@/components/TitleBar.vue';
 import TitleBarOffset from '@/components/TitleBarOffset.vue';
 import UpdateModal from '@/components/UpdateModal.vue';
@@ -15,6 +15,7 @@ import {
   subscribeKeystrokeUpdate,
   subscribeListenerError,
 } from '@/lib/keystroke';
+import { initTheme } from '@/lib/theme';
 import { checkForUpdate, type UpdateInfo } from '@/lib/update';
 
 const todayDate = ref(formatDate(new Date()));
@@ -34,7 +35,10 @@ const unlisteners: Array<() => void> = [];
 // UA による初期値で初回レンダリングのちらつきを防ぎ、plugin-os で確定する
 const showTitleBar = ref(!navigator.userAgent.includes('Macintosh'));
 
+let cleanupTheme: (() => void) | null = null;
+
 onMounted(async () => {
+  cleanupTheme = initTheme();
   showTitleBar.value = (await platform()) !== 'macos';
   checkForUpdate().then((info) => {
     updateInfo.value = info;
@@ -59,6 +63,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   unlisteners.forEach((fn) => fn());
+  cleanupTheme?.();
 });
 
 // < は過去方向（右スライド）、> / TODAY は未来方向（左スライド）
@@ -117,7 +122,7 @@ const DAILY_GOAL = 10000;
       <header class="flex items-center px-6 h-22 shrink-0">
         <div class="flex-1"><TabGroup /></div>
         <DayNav v-model="targetDate" :today-date="todayDate" />
-        <div class="flex-1 flex justify-end"><ThemeToggle /></div>
+        <div class="flex-1 flex justify-end"><AlwaysOnTopToggle /></div>
       </header>
 
       <!-- Main content card（背景は固定、内部コンテンツのみスライド） -->

@@ -57,7 +57,7 @@
   background-color: var(--background-color);
 }
 
-/* Dark mode — ThemeToggle が html.dark クラスを付け外しして切り替える */
+/* Dark mode — theme.ts の initTheme() が html.dark クラスを付け外しして切り替える */
 html.dark {
   --pond-color: var(--color-tm-dark-black);
   --background-color: var(--color-tm-black);

@@ -28,6 +28,16 @@
         "resizable": false,
         "visible": false,
         "center": true
+      },
+      {
+        "label": "settings",
+        "title": "Settings",
+        "url": "settings.html",
+        "width": 480,
+        "height": 240,
+        "resizable": false,
+        "visible": false,
+        "center": true
       }
     ],
     "security": {

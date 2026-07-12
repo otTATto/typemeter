@@ -117,8 +117,8 @@ fn show_main_window(app: &tauri::AppHandle) {
 /// # Behavior
 /// * メニュー構成（Open typemeter / Settings… / Quit typemeter）は OS 共通
 /// * アイコン・クリック挙動は `configure_tray_platform` に切り出した OS 固有部分で分岐する
-/// * setup 中ではなく `RunEvent::Ready` から呼び出すこと（macOS ではイベントループ開始前に
-///   構築したトレイがメニューバーに表示されない問題があるため）
+/// * setup 中ではなく `RunEvent::Ready` から呼び出すこと（macOS ではイベントループ開始前の
+///   トレイ構築によるタイミング起因の不具合が報告されているため）
 ///
 /// # Errors
 /// メニューやトレイアイコンの構築に失敗した場合、その `tauri::Error` を返す
@@ -370,7 +370,7 @@ pub fn run() {
         match event {
             tauri::RunEvent::Ready => {
                 // バックグラウンド常駐用のシステムトレイアイコンを構築する
-                // （setup 中に構築すると macOS でメニューバーに表示されないため Ready で行う）
+                // （macOS のタイミング起因の不具合を避けるため、setup ではなく Ready で行う）
                 if let Err(e) = build_tray(app_handle) {
                     eprintln!("[typemeter] failed to build tray icon: {e}");
                 }
@@ -379,6 +379,13 @@ pub fn run() {
                     today_db_count.clone(),
                     app_handle.clone(),
                 );
+            }
+            // macOS: 起動中に Finder や Dock のアプリアイコンから開き直されたときに
+            // メインウィンドウを表示する（macOS では再起動は新プロセスにならず、
+            // 既存プロセスへの reopen イベントとして届くため single-instance では拾えない）
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => {
+                show_main_window(app_handle);
             }
             // ウィンドウの × はプロセス終了ではなく非表示として扱う（バックグラウンド常駐）。
             // プロセスの終了はトレイメニューの Quit typemeter からのみ行う

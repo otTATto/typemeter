@@ -17,16 +17,27 @@ const toggle = () => {
   });
 };
 
+let isDisposed = false;
 let unlistenThemeChange: (() => void) | null = null;
 
 onMounted(async () => {
-  isDark.value = resolveIsDark(await getTheme());
-  unlistenThemeChange = await onThemeChange((theme) => {
+  const theme = await getTheme();
+  if (isDisposed) return;
+  isDark.value = resolveIsDark(theme);
+
+  const unlisten = await onThemeChange((theme) => {
     isDark.value = resolveIsDark(theme);
   });
+  // 購読完了前に cleanup が呼ばれていた場合は即座に unlisten する
+  if (isDisposed) {
+    unlisten();
+  } else {
+    unlistenThemeChange = unlisten;
+  }
 });
 
 onUnmounted(() => {
+  isDisposed = true;
   unlistenThemeChange?.();
 });
 </script>

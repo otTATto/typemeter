@@ -38,7 +38,10 @@ let storePromise: Promise<Store> | null = null;
  */
 const getSettingsStore = (): Promise<Store> => {
   if (!storePromise) {
-    storePromise = load(SETTINGS_FILE);
+    storePromise = load(SETTINGS_FILE).catch((err) => {
+      storePromise = null;
+      throw err;
+    });
   }
   return storePromise;
 };

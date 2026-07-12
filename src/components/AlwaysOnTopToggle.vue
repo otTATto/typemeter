@@ -13,14 +13,21 @@ onMounted(async () => {
 });
 
 const toggle = async () => {
-  const next = !isPinned.value;
+  const prev = isPinned.value;
+  const next = !prev;
   isPinned.value = next;
   try {
     await getCurrentWindow().setAlwaysOnTop(next);
-    await setAlwaysOnTop(next);
+    try {
+      await setAlwaysOnTop(next);
+    } catch (err) {
+      // ストア保存に失敗した場合はウィンドウの最前面状態も元に戻す
+      await getCurrentWindow().setAlwaysOnTop(prev);
+      throw err;
+    }
   } catch (err) {
     console.error('[AlwaysOnTopToggle] failed to set always-on-top:', err);
-    isPinned.value = !next;
+    isPinned.value = prev;
   }
 };
 </script>

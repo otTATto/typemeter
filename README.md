@@ -24,6 +24,10 @@ This is a desktop app built with [Tauri](https://tauri.app), a framework with a 
 | Package manager | [Bun](https://bun.sh)                   |
 | Build tool      | [Vite](https://vite.dev)                |
 
+## Documentation
+
+Developer documentation lives in [docs/](./docs). See [docs/README.md](./docs/README.md) for the index of available documents.
+
 ## How to Develop
 
 ### Prerequisites

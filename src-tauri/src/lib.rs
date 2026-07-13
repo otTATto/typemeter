@@ -10,6 +10,15 @@ use tauri::{Emitter, Manager};
 
 use db::{flush_minute_count, init_db, query_hourly_counts, query_today_db_count, DbPath};
 
+/// OS ログイン時の自動起動でアプリに渡されるコマンドライン引数
+///
+/// # Behavior
+/// * tauri-plugin-autostart が登録する自動起動エントリ（Windows: レジストリ Run キー、
+///   macOS: LaunchAgent）にこの引数が含まれる
+/// * この引数付きで起動された場合、メインウィンドウを表示せず
+///   バックグラウンド常駐（トレイのみ）で開始する
+const HIDDEN_LAUNCH_ARG: &str = "--hidden";
+
 /// 指定日の1時間ごとのキーストローク数を返す Tauri コマンド
 ///
 /// # Parameters
@@ -213,6 +222,43 @@ fn configure_tray_platform(
     Ok(builder.icon(icon).icon_as_template(true))
 }
 
+/// 初回起動時に一度だけ、ログイン時の自動起動をデフォルトで有効化する
+///
+/// # Behavior
+/// * settings.json の `isAutostartInitialized` キーで初期化済みかを判定し、初回のみ実行する
+/// * ユーザーが後から自動起動をオフにした選択を上書きしないため、2 回目以降は何もしない
+/// * 有効化に失敗した場合はフラグを保存せずエラーを報告する（次回起動時に再試行される）
+fn enable_autostart_on_first_run(app: &tauri::App) {
+    use tauri_plugin_autostart::ManagerExt;
+    use tauri_plugin_store::StoreExt;
+
+    let store = match app.store("settings.json") {
+        Ok(store) => store,
+        Err(e) => {
+            eprintln!("[typemeter] failed to load settings store: {e}");
+            return;
+        }
+    };
+
+    let is_initialized = store
+        .get("isAutostartInitialized")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    if is_initialized {
+        return;
+    }
+
+    if let Err(e) = app.autolaunch().enable() {
+        eprintln!("[typemeter] failed to enable autostart on first run: {e}");
+        return;
+    }
+
+    store.set("isAutostartInitialized", true);
+    if let Err(e) = store.save() {
+        eprintln!("[typemeter] failed to save settings store: {e}");
+    }
+}
+
 /// 起動時に保存済みの `alwaysOnTop` 設定をメインウィンドウへ適用する
 ///
 /// # Behavior
@@ -278,6 +324,10 @@ pub fn run() {
             |app_handle, _args, _cwd| {
                 show_main_window(app_handle);
             },
+        ))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![HIDDEN_LAUNCH_ARG]),
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
@@ -353,11 +403,22 @@ pub fn run() {
                     }
                 }
 
+                // 初回起動時のみ、ログイン時の自動起動をデフォルトで有効化する
+                enable_autostart_on_first_run(app);
+
                 // 保存済みの alwaysOnTop 設定を適用する（ちらつき防止のため show() より前に行う）
                 apply_always_on_top_from_settings(app);
 
-                // visible: false で起動しているためここで表示する（装飾変更後に表示することでちらつきを防ぐ）
-                if let Some(window) = app.get_webview_window("main") {
+                // visible: false で起動しているため、通常起動の場合はここで表示する
+                // （装飾変更後に表示することでちらつきを防ぐ）。
+                // 自動起動（HIDDEN_LAUNCH_ARG 付き）の場合は表示せず常駐のまま開始する
+                // args() は非 Unicode の引数が混ざっているとパニックするため args_os() で比較する
+                let is_hidden_launch = std::env::args_os().any(|arg| arg == HIDDEN_LAUNCH_ARG);
+                if is_hidden_launch {
+                    // macOS: ウィンドウを表示しない間は Dock アイコンも出さない
+                    #[cfg(target_os = "macos")]
+                    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                } else if let Some(window) = app.get_webview_window("main") {
                     window.show()?;
                 }
 

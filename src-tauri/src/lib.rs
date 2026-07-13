@@ -222,6 +222,43 @@ fn configure_tray_platform(
     Ok(builder.icon(icon).icon_as_template(true))
 }
 
+/// 初回起動時に一度だけ、ログイン時の自動起動をデフォルトで有効化する
+///
+/// # Behavior
+/// * settings.json の `isAutostartInitialized` キーで初期化済みかを判定し、初回のみ実行する
+/// * ユーザーが後から自動起動をオフにした選択を上書きしないため、2 回目以降は何もしない
+/// * 有効化に失敗した場合はフラグを保存せずエラーを報告する（次回起動時に再試行される）
+fn enable_autostart_on_first_run(app: &tauri::App) {
+    use tauri_plugin_autostart::ManagerExt;
+    use tauri_plugin_store::StoreExt;
+
+    let store = match app.store("settings.json") {
+        Ok(store) => store,
+        Err(e) => {
+            eprintln!("[typemeter] failed to load settings store: {e}");
+            return;
+        }
+    };
+
+    let is_initialized = store
+        .get("isAutostartInitialized")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    if is_initialized {
+        return;
+    }
+
+    if let Err(e) = app.autolaunch().enable() {
+        eprintln!("[typemeter] failed to enable autostart on first run: {e}");
+        return;
+    }
+
+    store.set("isAutostartInitialized", true);
+    if let Err(e) = store.save() {
+        eprintln!("[typemeter] failed to save settings store: {e}");
+    }
+}
+
 /// 起動時に保存済みの `alwaysOnTop` 設定をメインウィンドウへ適用する
 ///
 /// # Behavior
@@ -365,6 +402,9 @@ pub fn run() {
                         window.set_decorations(false)?;
                     }
                 }
+
+                // 初回起動時のみ、ログイン時の自動起動をデフォルトで有効化する
+                enable_autostart_on_first_run(app);
 
                 // 保存済みの alwaysOnTop 設定を適用する（ちらつき防止のため show() より前に行う）
                 apply_always_on_top_from_settings(app);

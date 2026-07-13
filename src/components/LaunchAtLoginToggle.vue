@@ -8,6 +8,8 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import ToggleSwitch from '@/components/ToggleSwitch.vue';
 
 const isAutostartEnabled = ref(false);
+// enable/disable の実行中フラグ。連打による並行実行で OS 側と表示が不整合になるのを防ぐ
+const isPending = ref(false);
 
 let isDisposed = false;
 
@@ -27,6 +29,8 @@ onUnmounted(() => {
 });
 
 const toggle = async () => {
+  if (isPending.value) return;
+  isPending.value = true;
   const prev = isAutostartEnabled.value;
   const next = !prev;
   isAutostartEnabled.value = next;
@@ -39,6 +43,8 @@ const toggle = async () => {
   } catch (err) {
     console.error('[LaunchAtLoginToggle] failed to set autostart:', err);
     isAutostartEnabled.value = prev;
+  } finally {
+    isPending.value = false;
   }
 };
 </script>
@@ -46,6 +52,7 @@ const toggle = async () => {
 <template>
   <ToggleSwitch
     :is-on="isAutostartEnabled"
+    :disabled="isPending"
     :aria-label="
       isAutostartEnabled ? 'ログイン時に自動起動をオフにする' : 'ログイン時に自動起動をオンにする'
     "

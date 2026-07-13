@@ -6,6 +6,8 @@
 defineProps<{
   /** トグルがオン状態かどうか（ノブの位置と aria-pressed に反映される） */
   isOn: boolean;
+  /** 操作を無効化するかどうか（非同期処理中の連打防止などに使う） */
+  disabled?: boolean;
 }>();
 
 defineEmits<{
@@ -16,8 +18,9 @@ defineEmits<{
 
 <template>
   <button
-    class="flex items-center justify-center w-13.5 h-11 border-0 bg-transparent cursor-pointer p-0"
+    class="flex items-center justify-center w-13.5 h-11 border-0 bg-transparent cursor-pointer p-0 disabled:opacity-50 disabled:cursor-not-allowed"
     :aria-pressed="isOn"
+    :disabled="disabled"
     @click="$emit('toggle')"
   >
     <span class="flex items-center w-13.5 h-7 bg-sub-color rounded-[14px] p-0.5">

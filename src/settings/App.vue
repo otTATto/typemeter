@@ -51,7 +51,9 @@ onUnmounted(() => {
         role="group"
         aria-labelledby="launch-at-login-label"
       >
-        <span id="launch-at-login-label" class="text-sm text-base-color">Launch at PC Login</span>
+        <span id="launch-at-login-label" class="text-sm text-base-color"
+          >Auto Launch at PC Login</span
+        >
         <LaunchAtLoginToggle />
       </div>
     </main>

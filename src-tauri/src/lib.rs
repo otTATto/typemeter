@@ -372,7 +372,8 @@ pub fn run() {
                 // visible: false で起動しているため、通常起動の場合はここで表示する
                 // （装飾変更後に表示することでちらつきを防ぐ）。
                 // 自動起動（HIDDEN_LAUNCH_ARG 付き）の場合は表示せず常駐のまま開始する
-                let is_hidden_launch = std::env::args().any(|arg| arg == HIDDEN_LAUNCH_ARG);
+                // args() は非 Unicode の引数が混ざっているとパニックするため args_os() で比較する
+                let is_hidden_launch = std::env::args_os().any(|arg| arg == HIDDEN_LAUNCH_ARG);
                 if is_hidden_launch {
                     // macOS: ウィンドウを表示しない間は Dock アイコンも出さない
                     #[cfg(target_os = "macos")]

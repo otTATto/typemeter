@@ -1,5 +1,9 @@
 # typemeter
 
+<p align="center">
+  <img width="728" height="207" alt="icon and title and subtitle of typemeter" src="https://github.com/user-attachments/assets/484091a8-1b62-436f-9b8f-6a763fa7315b" />
+</p>
+
 typemeter is a local activity meter for your typing, like a pedometer for your work at the keyboard.
 
 <img width="2059" height="986" alt="typemeter dashboard screenshot" src="https://github.com/user-attachments/assets/30bc40a4-bde0-48d5-ba2f-725182760510" />

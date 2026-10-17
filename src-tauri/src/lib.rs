@@ -1,6 +1,7 @@
 mod db;
 mod keystroke;
 
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -292,6 +293,120 @@ fn apply_always_on_top_from_settings(app: &tauri::App) {
     }
 }
 
+/// Move existing user data into the new identifier's data directory on first launch.
+/// The source is intentionally retained as a rollback copy.
+fn migrate_legacy_data(app: &tauri::App) -> Result<(), String> {
+    if std::env::var("TYPEMETER_DB_PATH").is_ok() {
+        return Ok(());
+    }
+
+    let new_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let Some(parent) = new_dir.parent() else {
+        return Ok(());
+    };
+    let old_dir = parent.join("com.taish.typemeter");
+    let old_db = old_dir.join("keystroke.db");
+    let old_settings = old_dir.join("settings.json");
+    let new_db = new_dir.join("keystroke.db");
+    let new_settings = new_dir.join("settings.json");
+
+    if !old_db.exists() && !old_settings.exists() {
+        return Ok(());
+    }
+    if new_db.exists() || new_settings.exists() {
+        eprintln!(
+            "[typemeter] data already exists at {}; skipping legacy migration and using the new data directory",
+            new_dir.display()
+        );
+        return Ok(());
+    }
+    if !old_db.is_file() || !old_settings.is_file() {
+        return Err(format!(
+            "Legacy typemeter data at {} is incomplete (settings.json and keystroke.db are both required). No files were changed.",
+            old_dir.display()
+        ));
+    }
+    for suffix in ["-journal", "-wal", "-shm"] {
+        if old_db
+            .with_file_name(format!("keystroke.db{suffix}"))
+            .exists()
+        {
+            return Err(format!(
+                "Legacy database has an active SQLite sidecar at {}. Close the old typemeter instance and try again.",
+                old_dir.display()
+            ));
+        }
+    }
+
+    let mut header = [0u8; 16];
+    let mut source = std::fs::File::open(&old_db).map_err(|e| e.to_string())?;
+    use std::io::Read;
+    source.read_exact(&mut header).map_err(|e| e.to_string())?;
+    if &header != b"SQLite format 3\0" {
+        return Err(format!(
+            "Legacy database at {} is not a SQLite database.",
+            old_db.display()
+        ));
+    }
+
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+    let confirmed = app
+        .dialog()
+        .message(format!(
+            "Starting with this version, typemeter stores its data in a new location. Your existing settings and keystroke history were found in the previous location.\n\nPrevious Location:\n{}\n\nNew Location:\n{}\n\nChoose Copy Data to copy them to the new location.",
+            old_dir.display(),
+            new_dir.display()
+        ))
+        .title("Migrate typemeter data")
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            "Copy Data".into(),
+            "Quit".into(),
+        ))
+        .blocking_show();
+    if !confirmed {
+        return Err("migration_declined".into());
+    }
+
+    std::fs::create_dir_all(&new_dir).map_err(|e| e.to_string())?;
+    let stage_db = new_dir.join("keystroke.db.migrating");
+    let stage_settings = new_dir.join("settings.json.migrating");
+    let result = (|| -> Result<(), String> {
+        std::fs::copy(&old_db, &stage_db).map_err(|e| e.to_string())?;
+        std::fs::copy(&old_settings, &stage_settings).map_err(|e| e.to_string())?;
+        if !files_match(&old_db, &stage_db)? || !files_match(&old_settings, &stage_settings)? {
+            return Err("Copied data does not match the source.".into());
+        }
+        std::fs::rename(&stage_settings, &new_settings).map_err(|e| e.to_string())?;
+        std::fs::rename(&stage_db, &new_db).map_err(|e| e.to_string())?;
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&stage_db);
+        let _ = std::fs::remove_file(&stage_settings);
+        let _ = std::fs::remove_file(&new_settings);
+        let _ = std::fs::remove_file(&new_db);
+    }
+    result
+}
+
+fn files_match(left: &Path, right: &Path) -> Result<bool, String> {
+    use std::io::Read;
+    let mut left = std::fs::File::open(left).map_err(|e| e.to_string())?;
+    let mut right = std::fs::File::open(right).map_err(|e| e.to_string())?;
+    let mut left_buffer = [0u8; 8192];
+    let mut right_buffer = [0u8; 8192];
+    loop {
+        let left_len = left.read(&mut left_buffer).map_err(|e| e.to_string())?;
+        let right_len = right.read(&mut right_buffer).map_err(|e| e.to_string())?;
+        if left_len != right_len || left_buffer[..left_len] != right_buffer[..right_len] {
+            return Ok(false);
+        }
+        if left_len == 0 {
+            return Ok(true);
+        }
+    }
+}
+
 fn resolve_db_path(app: &tauri::App) -> String {
     if let Some(path) = std::env::var("TYPEMETER_DB_PATH")
         .ok()
@@ -330,12 +445,29 @@ pub fn run() {
             Some(vec![HIDDEN_LAUNCH_ARG]),
         ))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup({
             let minute_count = minute_count.clone();
             let today_db_count = today_db_count.clone();
             move |app| {
+                if let Err(error) = migrate_legacy_data(app) {
+                    if error == "migration_declined" {
+                        app.handle().exit(0);
+                        return Ok(());
+                    }
+                    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                    app.dialog()
+                        .message(format!(
+                            "typemeter could not migrate your existing data and will now quit. Your old data has not been changed.\n\nDetails: {error}\n\nFor manual migration instructions, see docs/data-migration.md in the GitHub repository."
+                        ))
+                        .title("typemeter data migration error")
+                        .kind(MessageDialogKind::Error)
+                        .blocking_show();
+                    app.handle().exit(1);
+                    return Ok(());
+                }
                 let db_path = resolve_db_path(app);
 
                 init_db(&db_path);

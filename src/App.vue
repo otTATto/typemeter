@@ -4,11 +4,13 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import AlwaysOnTopToggle from '@/components/AlwaysOnTopToggle.vue';
 import DayNav from '@/components/DayNav.vue';
 import DayStamps from '@/components/DayStamps.vue';
+import LegacyDataCleanupModal from '@/components/LegacyDataCleanupModal.vue';
 import MeterRing from '@/components/MeterRing.vue';
 import TabGroup from '@/components/TabGroup.vue';
 import TitleBar from '@/components/TitleBar.vue';
 import TitleBarOffset from '@/components/TitleBarOffset.vue';
 import UpdateModal from '@/components/UpdateModal.vue';
+import { deleteLegacyData, getLegacyDataStatus, type LegacyDataStatus } from '@/lib/dataMigration';
 import { formatDate } from '@/lib/date';
 import {
   fetchHourlyCounts,
@@ -28,6 +30,10 @@ const displayTotal = computed(() => (isToday.value ? todayTotal.value : pastTota
 
 const listenerError = ref<string | null>(null);
 const updateInfo = ref<UpdateInfo | null>(null);
+const legacyDataStatus = ref<LegacyDataStatus | null>(null);
+const legacyDataStatusChecked = ref(false);
+const isDeletingLegacyData = ref(false);
+const legacyDataDeleteError = ref<string | null>(null);
 
 const unlisteners: Array<() => void> = [];
 
@@ -40,6 +46,16 @@ let cleanupTheme: (() => void) | null = null;
 onMounted(async () => {
   cleanupTheme = initTheme();
   showTitleBar.value = (await platform()) !== 'macos';
+  getLegacyDataStatus()
+    .then((status) => {
+      legacyDataStatus.value = status;
+    })
+    .catch((error) => {
+      console.error('[App] getLegacyDataStatus failed:', error);
+    })
+    .finally(() => {
+      legacyDataStatusChecked.value = true;
+    });
   checkForUpdate().then((info) => {
     updateInfo.value = info;
   });
@@ -60,6 +76,24 @@ onMounted(async () => {
     }),
   );
 });
+
+const dismissLegacyDataModal = () => {
+  legacyDataStatus.value = null;
+  legacyDataDeleteError.value = null;
+};
+
+const removeLegacyData = async () => {
+  isDeletingLegacyData.value = true;
+  legacyDataDeleteError.value = null;
+  try {
+    await deleteLegacyData();
+    dismissLegacyDataModal();
+  } catch (error) {
+    legacyDataDeleteError.value = String(error);
+  } finally {
+    isDeletingLegacyData.value = false;
+  }
+};
 
 onUnmounted(() => {
   unlisteners.forEach((fn) => fn());
@@ -111,11 +145,19 @@ const DAILY_GOAL = 10000;
     <template v-else>
       <TitleBarOffset :has-title-bar="showTitleBar" />
       <UpdateModal
-        v-if="updateInfo"
+        v-if="legacyDataStatusChecked && !legacyDataStatus && updateInfo"
         :version="updateInfo.version"
         :current-version="updateInfo.currentVersion"
         :release-url="updateInfo.releaseUrl"
         @dismiss="updateInfo = null"
+      />
+      <LegacyDataCleanupModal
+        v-if="legacyDataStatus"
+        :status="legacyDataStatus"
+        :is-deleting="isDeletingLegacyData"
+        :error="legacyDataDeleteError"
+        @close="dismissLegacyDataModal"
+        @delete="removeLegacyData"
       />
 
       <!-- Header -->

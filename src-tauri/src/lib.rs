@@ -7,6 +7,7 @@ use std::thread;
 use std::time::Duration;
 
 use chrono::Local;
+use rusqlite::{Connection, OptionalExtension};
 use tauri::{Emitter, Manager};
 
 use db::{flush_minute_count, init_db, query_hourly_counts, query_today_db_count, DbPath};
@@ -30,6 +31,173 @@ const HIDDEN_LAUNCH_ARG: &str = "--hidden";
 #[tauri::command]
 fn get_hourly_counts(date: String, db_path: tauri::State<DbPath>) -> Vec<u64> {
     query_hourly_counts(&db_path.0, &date).to_vec()
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LegacyDataStatus {
+    previous_location: String,
+    new_location: String,
+    old_record_count: Option<u64>,
+    matching_record_count: Option<u64>,
+    settings_keys_retained: bool,
+    can_delete: bool,
+    issue: Option<String>,
+}
+
+fn legacy_data_status(app: &tauri::AppHandle) -> Result<Option<LegacyDataStatus>, String> {
+    if std::env::var("TYPEMETER_DB_PATH").is_ok() {
+        return Ok(None);
+    }
+    let new_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let Some(parent) = new_dir.parent() else {
+        return Ok(None);
+    };
+    let old_dir = parent.join("com.taish.typemeter");
+    let old_db = old_dir.join("keystroke.db");
+    let old_settings = old_dir.join("settings.json");
+    if !old_db.exists() && !old_settings.exists() {
+        return Ok(None);
+    }
+
+    let mut status = LegacyDataStatus {
+        previous_location: old_dir.to_string_lossy().into_owned(),
+        new_location: new_dir.to_string_lossy().into_owned(),
+        old_record_count: None,
+        matching_record_count: None,
+        settings_keys_retained: false,
+        can_delete: false,
+        issue: None,
+    };
+
+    if !old_db.is_file() || !old_settings.is_file() {
+        status.issue = Some("The previous data folder is incomplete.".into());
+        return Ok(Some(status));
+    }
+    for suffix in ["-journal", "-wal", "-shm"] {
+        if old_db
+            .with_file_name(format!("keystroke.db{suffix}"))
+            .exists()
+        {
+            status.issue = Some(
+                "The previous database has an active SQLite sidecar. Close any older typemeter instance before removing it.".into(),
+            );
+            return Ok(Some(status));
+        }
+    }
+
+    match compare_settings_keys(&old_settings, &new_dir.join("settings.json")) {
+        Ok(retained) => status.settings_keys_retained = retained,
+        Err(error) => status.issue = Some(error),
+    }
+    match compare_legacy_records(&old_db, &new_dir.join("keystroke.db")) {
+        Ok((old_count, matching_count)) => {
+            status.old_record_count = Some(old_count);
+            status.matching_record_count = Some(matching_count);
+        }
+        Err(error) => {
+            status.issue.get_or_insert(error);
+        }
+    };
+
+    status.can_delete = status.issue.is_none()
+        && status.settings_keys_retained
+        && status.old_record_count == status.matching_record_count;
+    if !status.can_delete && status.issue.is_none() {
+        status.issue = Some(
+            "The new data does not contain all previous records or settings keys. The previous data will be kept.".into(),
+        );
+    }
+    Ok(Some(status))
+}
+
+fn compare_settings_keys(
+    old_path: &std::path::Path,
+    new_path: &std::path::Path,
+) -> Result<bool, String> {
+    let old_value: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(old_path).map_err(|e| format!("Could not read previous settings: {e}"))?,
+    )
+    .map_err(|e| format!("Previous settings are not valid JSON: {e}"))?;
+    let new_value: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(new_path).map_err(|e| format!("Could not read new settings: {e}"))?,
+    )
+    .map_err(|e| format!("New settings are not valid JSON: {e}"))?;
+    let old_object = old_value
+        .as_object()
+        .ok_or_else(|| "Previous settings are not a JSON object.".to_string())?;
+    let new_object = new_value
+        .as_object()
+        .ok_or_else(|| "New settings are not a JSON object.".to_string())?;
+    Ok(old_object.keys().all(|key| new_object.contains_key(key)))
+}
+
+fn compare_legacy_records(
+    old_path: &std::path::Path,
+    new_path: &std::path::Path,
+) -> Result<(u64, u64), String> {
+    let old = Connection::open_with_flags(old_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .map_err(|e| format!("Could not open previous database: {e}"))?;
+    let new = Connection::open_with_flags(new_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .map_err(|e| format!("Could not open new database: {e}"))?;
+    let old_count: i64 = old
+        .query_row("SELECT COUNT(*) FROM keystroke_logs", [], |row| row.get(0))
+        .map_err(|e| format!("Could not read previous records: {e}"))?;
+    let mut old_stmt = old
+        .prepare("SELECT id, recorded_at, minute_count FROM keystroke_logs ORDER BY id")
+        .map_err(|e| format!("Could not read previous records: {e}"))?;
+    let mut new_stmt = new
+        .prepare("SELECT recorded_at, minute_count FROM keystroke_logs WHERE id = ?1")
+        .map_err(|e| format!("Could not read new records: {e}"))?;
+    let rows = old_stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+            ))
+        })
+        .map_err(|e| format!("Could not read previous records: {e}"))?;
+    let mut matching_count = 0u64;
+    for row in rows {
+        let (id, recorded_at, minute_count) =
+            row.map_err(|e| format!("Could not read previous records: {e}"))?;
+        let new_row: Option<(String, i64)> = new_stmt
+            .query_row([id], |row| Ok((row.get(0)?, row.get(1)?)))
+            .optional()
+            .map_err(|e| format!("Could not compare new records: {e}"))?;
+        if new_row == Some((recorded_at, minute_count)) {
+            matching_count += 1;
+        }
+    }
+    Ok((old_count.max(0) as u64, matching_count))
+}
+
+#[tauri::command]
+fn get_legacy_data_status(app: tauri::AppHandle) -> Result<Option<LegacyDataStatus>, String> {
+    legacy_data_status(&app)
+}
+
+#[tauri::command]
+fn delete_legacy_data(app: tauri::AppHandle) -> Result<(), String> {
+    let Some(status) = legacy_data_status(&app)? else {
+        return Ok(());
+    };
+    if !status.can_delete {
+        return Err(status
+            .issue
+            .unwrap_or_else(|| "The previous data could not be verified.".into()));
+    }
+    let old_dir = std::path::PathBuf::from(status.previous_location);
+    std::fs::remove_file(old_dir.join("keystroke.db")).map_err(|e| e.to_string())?;
+    std::fs::remove_file(old_dir.join("settings.json")).map_err(|e| e.to_string())?;
+    if std::fs::read_dir(&old_dir)
+        .map(|mut entries| entries.next().is_none())
+        .unwrap_or(false)
+    {
+        let _ = std::fs::remove_dir(&old_dir);
+    }
+    Ok(())
 }
 
 /// About ウィンドウを表示する。既に表示中の場合はフォーカスする
@@ -559,6 +727,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_hourly_counts,
+            get_legacy_data_status,
+            delete_legacy_data,
             open_about_window,
             open_settings_window
         ])

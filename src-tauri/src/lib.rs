@@ -191,11 +191,18 @@ fn delete_legacy_data(app: tauri::AppHandle) -> Result<(), String> {
     let old_dir = std::path::PathBuf::from(status.previous_location);
     std::fs::remove_file(old_dir.join("keystroke.db")).map_err(|e| e.to_string())?;
     std::fs::remove_file(old_dir.join("settings.json")).map_err(|e| e.to_string())?;
-    if std::fs::read_dir(&old_dir)
-        .map(|mut entries| entries.next().is_none())
-        .unwrap_or(false)
-    {
-        let _ = std::fs::remove_dir(&old_dir);
+
+    // Finder may leave its metadata file in an otherwise empty data directory.
+    #[cfg(target_os = "macos")]
+    if old_dir.join(".DS_Store").is_file() {
+        std::fs::remove_file(old_dir.join(".DS_Store")).map_err(|e| e.to_string())?;
+    }
+
+    match std::fs::remove_dir(&old_dir) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::DirectoryNotEmpty => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.to_string()),
     }
     Ok(())
 }

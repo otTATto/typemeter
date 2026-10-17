@@ -635,7 +635,7 @@ pub fn run() {
                     use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
                     app.dialog()
                         .message(format!(
-                            "typemeter could not migrate your existing data and will now quit. Your old data has not been changed.\n\nDetails: {error}\n\nFor manual migration instructions, see docs/data-migration.md in the GitHub repository."
+                            "typemeter could not migrate your existing data and will now quit. Your old data has not been changed.\n\nDetails: {error}\n\nFor recovery guidance, see docs/data-migration.md in the GitHub repository."
                         ))
                         .title("typemeter data migration error")
                         .kind(MessageDialogKind::Error)

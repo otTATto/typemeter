@@ -34,6 +34,7 @@ const emit = defineEmits<{
     <h3 class="text-2xl font-bold">Previous Data Still Exists</h3>
     <div class="my-2 space-y-5">
       <p class="text-left">
+        <img src="/icon.svg" alt="" class="inline-block size-[1.5em]" />
         typemeter found the <span class="text-accent-color font-bold">previous</span> data folder.
         The old files are <span class="text-danger-color font-bold">no longer</span> used by this
         version.

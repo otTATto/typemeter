@@ -4,7 +4,7 @@
 
 - 大まかには master, feature/, fix/ の 3 種類のブランチから構成される
 - 最新の master ブランチから作業ブランチ `feature/**` または `fix/**` を切って作業を開始する
-- 例: `feature/user-account-creation-page` 
+- 例: `feature/user-account-creation-page`
 
 ## コミットメッセージについて
 

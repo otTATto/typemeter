@@ -10,7 +10,7 @@
 3. owner と repo は `gh repo view --json owner,name` で取得する
 4. 取得したコメントを分析し、**未対応のもの**を洗い出す
    - resolve 済みのインラインコメントは除外する（`gh api /repos/{owner}/{repo}/pulls/{pr_number}/comments` の `position` が `null` のものは resolve 済みの可能性が高い）
-   - ボットや自動生成コメント（Gemini Code Assist 等）も含めて確認する
+   - ボットや自動生成コメントも含めて確認する
    - prefix（[MUST] / [WANT] / [IMO] / [Q] / [NITS] / [FYI]）があれば優先度の参考にする
      - [MUST] は必須対応
      - [WANT] / [IMO] は対応要否をユーザーに確認する

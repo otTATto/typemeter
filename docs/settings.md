@@ -39,10 +39,13 @@ Settings ウィンドウは、以下の場所から開けます。
 
 設定ファイルは、タイプ数を保存する `keystroke.db` と同じディレクトリに置かれます。
 
-| OS      | パス                                                                      |
-| ------- | ------------------------------------------------------------------------- |
-| Windows | `C:\Users\<ユーザー名>\AppData\Roaming\com.taish.typemeter\settings.json` |
-| macOS   | `~/Library/Application Support/com.taish.typemeter/settings.json`         |
+| OS      | パス                                                                |
+| ------- | ------------------------------------------------------------------- |
+| Windows | `%APPDATA%\bio.tato.typemeter\settings.json`                        |
+| macOS   | `~/Library/Application Support/bio.tato.typemeter/settings.json`    |
+| Linux   | `${XDG_DATA_HOME:-~/.local/share}/bio.tato.typemeter/settings.json` |
+
+アプリ識別子変更前の `com.taish.typemeter` にデータがあり、新しい保存先にデータがない場合、新しいバージョンの初回起動時に確認ダイアログが表示され、同意すると新しい保存先へコピーされます。新しい保存先にデータがある場合はそちらを優先します。旧データが残っている間は、起動時に比較と削除を行うモーダルが表示されます。詳しくは[保存データの移行](./data-migration.md)を参照してください。
 
 設定ファイルの中身は、次のようなフラットな JSON です。
 

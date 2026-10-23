@@ -1,0 +1,28 @@
+{
+  "version": "0.1.0",
+  "modules": [
+    "lang/rust",
+    "lang/typescript",
+    "stack/lucide",
+    "stack/tailwind",
+    "stack/vue",
+    "stack/web"
+  ],
+  "files": {
+    ".agents/rules/comment.md": "sha256:43381f14a7ab5e54adc098f085c27d9913a9287125276a503ccffb540c1dbe42",
+    ".agents/rules/documentation.md": "sha256:57df8397f37b29a40c5afece365eb71355230c334894c65bc0f0659424d6cdd4",
+    ".agents/rules/git.md": "sha256:052a46c661413c6c3fa7fa1016200d835044e3935ada4ee3a5dd2e92b51eb1fc",
+    ".agents/rules/lucide.md": "sha256:c80c29980b7315f29e8d74dc3b59b0f5542e216d7ea147d2446a69f5975b7f6c",
+    ".agents/rules/naming.md": "sha256:8d75015571fdcf5d356ee69fefcdb8522004491e0f6af496ce0170f1126c69ce",
+    ".agents/rules/readability.md": "sha256:e13b4c63ffd937b4afce731e007b72ace8bd9b9a96178f5891cf595454211b05",
+    ".agents/rules/review.md": "sha256:c995f2e94a76d68da51822c6cb40406c84fe93fa2f9b28889d7c69e0f2398f65",
+    ".agents/rules/rust.md": "sha256:53cbc8497ca7aff1c4be326944826d8765c68eab3197ad25349989560937edc6",
+    ".agents/rules/tailwind.md": "sha256:e7ff3f94ec7f3b7c2ddf00ba534d233506422a0c522e25be544a8e8198997058",
+    ".agents/rules/typescript.md": "sha256:482435f8d5aa5fc15203f6f89fa9d2f095da22ba9d7bd269f350febde5770f00",
+    ".agents/rules/vue.md": "sha256:19db4ed18613209388a42a71bfe29cc0dbe672c63da3b0afddfb3cc87eabd8e0",
+    ".agents/rules/web.md": "sha256:f9c4151b85ae608a4983492b232ab050741de2fbccb14248c88d5c94927b52dc"
+  },
+  "blocks": {
+    "AGENTS.md": "sha256:3ccbb06af263e7c3c69960bffba39cf965d10aa9efb5398958f6795cf995ac46"
+  }
+}
